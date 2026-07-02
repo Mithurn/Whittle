@@ -73,13 +73,18 @@ function describeInput(input: GeneratePlanRequest): string {
   return `Hobby: ${input.hobbyName}. Skill level: ${input.level}. Goal: ${input.goal}. Time commitment: ${input.timeCommitment}. ${known}`;
 }
 
+const SEQUENCING_RULE =
+  `Sequence techniques strictly from foundational to advanced — never place a technique before ` +
+  `the prerequisite skills it depends on. Each technique should build on the ones before it.`;
+
 function buildGroundedPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby, ordered from foundational to advanced, ` +
-    `tailored to the stated skill level, goal, and what they already know. For each technique, use Google Search to find ` +
+    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ` +
+    `Tailor the plan to the stated skill level, goal, and what they already know. For each technique, use Google Search to find ` +
     `1-3 real, currently-live resources (a mix of video/reading/audio where sensible for a physical or practical skill — ` +
-    `never audio-only for a technique that requires seeing physical form). For each resource include its exact title, exact URL, ` +
+    `never audio-only for a technique that requires seeing physical form). Each resource's URL must point to a genuinely distinct ` +
+    `source — never reuse the same URL for two different resources. For each resource include its exact title, exact URL, ` +
     `resource type, and a one-line reason it fits this specific user. Also include a one-line summary tying the plan to their goal.`
   );
 }
@@ -87,8 +92,8 @@ function buildGroundedPrompt(input: GeneratePlanRequest): string {
 function buildUngroundedPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby, ordered from foundational to advanced, ` +
-    `tailored to the stated skill level, goal, and what they already know. You do not have access to live search, so for each ` +
+    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ` +
+    `Tailor the plan to the stated skill level, goal, and what they already know. You do not have access to live search, so for each ` +
     `technique's 1-3 resources, write a plausible title and resource type (a mix of video/reading/audio where sensible — never ` +
     `audio-only for a technique that requires seeing physical form) and a one-line reason it fits this user. For the "url" field, ` +
     `write any well-formed https URL as a placeholder — it will be discarded and replaced automatically, so it does not need to be real. ` +
@@ -164,26 +169,60 @@ async function callGroq(userContent: string): Promise<unknown> {
   return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent);
 }
 
+// A single grounding pass can fail to surface enough distinct sources for
+// every resource slot; when that happens the structuring model tends to
+// reuse a URL it already saw, paired with an invented title. Treating that
+// as a validation failure (same as a schema mismatch) lets the existing
+// retry catch it before a plan with contradictory resource titles ships.
+function hasDuplicateResourceUrls(plan: AIPlanResponse): boolean {
+  const urls = plan.techniques.flatMap((technique) =>
+    technique.resources.map((resource) => resource.url)
+  );
+  return new Set(urls).size !== urls.length;
+}
+
 // Retries once on validation failure. Throws if neither attempt
-// produces a schema-valid plan.
+// produces a schema-valid plan with no duplicate resource URLs.
 async function structureWithFallback(userContent: string): Promise<AIPlanResponse> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const raw = await callGroq(userContent);
       const parsed = AIPlanResponseSchema.safeParse(raw);
-      if (parsed.success) return parsed.data;
-      lastError = parsed.error;
+      if (parsed.success && !hasDuplicateResourceUrls(parsed.data)) return parsed.data;
+      lastError = parsed.success ? new Error("Duplicate resource URLs across plan") : parsed.error;
     } catch (err) {
       lastError = err;
     }
   }
-  throw new Error("Groq structuring failed schema validation twice", { cause: lastError });
+  throw new Error("Groq structuring failed schema/duplicate-URL validation twice", {
+    cause: lastError,
+  });
 }
 
 async function generateGroundedPlan(input: GeneratePlanRequest): Promise<AIPlanResponse> {
   const groundedText = await callGeminiGrounded(buildGroundedPrompt(input));
   return structureWithFallback(buildStructuringPrompt(groundedText));
+}
+
+const KNOWN_SOURCE_NAMES: Record<string, string> = {
+  "youtube.com": "YouTube",
+  "chess.com": "Chess.com",
+  "lichess.org": "Lichess",
+  "google.com": "Google Search",
+};
+
+// Never trust the AI to name its own source consistently — derive it from
+// the URL itself, which is deterministic and can't be hallucinated.
+function deriveSourceName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    if (hostname in KNOWN_SOURCE_NAMES) return KNOWN_SOURCE_NAMES[hostname];
+    const label = hostname.split(".")[0];
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  } catch {
+    return "Unknown source";
+  }
 }
 
 function constructSearchUrl(resource: { type: string; title: string }, hobbyName: string): string {
@@ -230,6 +269,7 @@ function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyP
           type: resource.type,
           title: resource.title,
           url: resource.url,
+          sourceName: deriveSourceName(resource.url),
           whyChosen: resource.whyChosen,
         })
       ),

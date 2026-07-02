@@ -24,13 +24,19 @@ function makeValidAiPlan() {
       resources: [
         {
           type: "video",
-          title: "Example Title",
-          url: "https://example.com/video",
+          title: `Example Title ${i + 1}`,
+          url: `https://example.com/video-${i + 1}`,
           whyChosen: "It fits this user's level.",
         },
       ],
     })),
   };
+}
+
+function makeAiPlanWithDuplicateUrls() {
+  const plan = makeValidAiPlan();
+  plan.techniques[1].resources[0].url = plan.techniques[0].resources[0].url;
+  return plan;
 }
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
@@ -79,7 +85,21 @@ describe("POST /api/generate-plan", () => {
     expect(json.techniques[0].id).toBeDefined();
     expect(json.techniques[0].status).toBe("not_started");
     expect(json.techniques[0].order).toBe(0);
-    expect(json.techniques[0].resources[0].url).toBe("https://example.com/video");
+    expect(json.techniques[0].resources[0].url).toBe("https://example.com/video-1");
+    expect(json.techniques[0].resources[0].sourceName).toBe("Example");
+  });
+
+  it("derives sourceName from known hostnames", async () => {
+    mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
+    const plan = makeValidAiPlan();
+    plan.techniques[0].resources[0].url = "https://www.youtube.com/watch?v=abc123";
+    global.fetch = vi.fn(async () =>
+      jsonResponse({ choices: [{ message: { content: JSON.stringify(plan) } }], usage: {} })
+    ) as unknown as typeof fetch;
+
+    const res = await POST(makeRequest(validRequestBody));
+    const json = await res.json();
+    expect(json.techniques[0].resources[0].sourceName).toBe("YouTube");
   });
 
   it("returns 400 for an invalid request body", async () => {
@@ -128,6 +148,29 @@ describe("POST /api/generate-plan", () => {
     const res = await POST(makeRequest(validRequestBody));
     expect(res.status).toBe(200);
     expect(groqCalls).toBe(2);
+  });
+
+  it("retries Groq once and recovers when the first attempt returns duplicate resource URLs", async () => {
+    mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
+    let groqCalls = 0;
+    global.fetch = vi.fn(async () => {
+      groqCalls++;
+      const plan = groqCalls === 1 ? makeAiPlanWithDuplicateUrls() : makeValidAiPlan();
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify(plan) } }],
+        usage: {},
+      });
+    }) as unknown as typeof fetch;
+
+    const res = await POST(makeRequest(validRequestBody));
+    expect(res.status).toBe(200);
+    expect(groqCalls).toBe(2);
+
+    const json = await res.json();
+    const urls = json.techniques.flatMap((t: { resources: { url: string }[] }) =>
+      t.resources.map((r) => r.url)
+    );
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it("returns a structured error response when Gemini and Groq both fail", async () => {

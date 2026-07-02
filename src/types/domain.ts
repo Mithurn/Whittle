@@ -13,6 +13,7 @@ export interface Resource {
   type: ResourceType;
   title: string;
   url: string;
+  sourceName: string; // e.g. "YouTube", "Chess.com" — derived server-side from the URL's hostname, never AI-generated
   whyChosen: string; // AI's one-line reason THIS resource fits the user
 }
 

@@ -1,0 +1,184 @@
+{
+  "id": "69760244-bc5b-4972-b3a0-7e6f4cfeaabd",
+  "hobbyName": "chess",
+  "level": "beginner",
+  "goal": "beat my dad at chess",
+  "timeCommitment": "a few hours a week",
+  "knownTopics": [
+    "how the pieces move"
+  ],
+  "summary": "Here's a tailored learning plan to help you beat your dad at chess, building from foundational concepts to more advanced strategies, all while fitting a few hours a week commitment: This plan focuses on practical, actionable techniques to quickly improve your game, leveraging your existing knowledge of how pieces move to systematically build a strong understanding and strategy for defeating your opponent.",
+  "createdAt": "2026-07-02T07:33:34.258Z",
+  "techniques": [
+    {
+      "id": "8697a74f-5511-40a7-a998-ab3b87a55ef8",
+      "name": "Master Opening Principles",
+      "description": "Understanding how to start a game effectively is crucial. This technique focuses on controlling the center, developing your pieces efficiently, and ensuring your king's safety in the initial moves.",
+      "rationale": "Strong openings give you a solid position and prevent early disadvantages.",
+      "status": "not_started",
+      "order": 0,
+      "resources": [
+        {
+          "id": "8d26706d-3822-4ccf-a833-36041df3d6c0",
+          "type": "video",
+          "title": "Beginner Chess Openings - The 3 Principles You NEED To Know!",
+          "url": "https://www.youtube.com/watch?v=J3c11I7a9A0",
+          "whyChosen": "This video clearly explains the fundamental principles for starting a chess game, making it perfect for a beginner to grasp good habits early.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "cb62fefe-d079-4bfb-8521-22d340805eee",
+          "type": "reading",
+          "title": "Learn the Basic Chess Opening Principles",
+          "url": "https://www.chess.com/lessons/beginner-openings/basic-opening-principles",
+          "whyChosen": "Chess.com offers an interactive lesson that reinforces opening principles with practical examples and exercises, ideal for active learning.",
+          "sourceName": "Chess.com"
+        },
+        {
+          "id": "79b1bb12-357c-4d13-88f4-5d5c0f5d8a8a",
+          "type": "video",
+          "title": "Beginner Chess Opening Strategy - How to Start Your First Game!",
+          "url": "https://www.youtube.com/watch?v=S3QW1h6X5Cg",
+          "whyChosen": "Another video resource providing a different perspective and reinforcing the critical initial steps in a chess game.",
+          "sourceName": "YouTube"
+        }
+      ]
+    },
+    {
+      "id": "3ccd580f-5d43-4729-ac3b-829946735ab4",
+      "name": "Learn Basic Tactics (Forks, Pins, Skewers)",
+      "description": "Tactics are short-term maneuvers that win material or create decisive advantages. Learning common tactical motifs like forks, pins, and skewers will allow you to capitalize on your dad's mistakes and create your own opportunities.",
+      "rationale": "Recognizing and executing basic tactics lets you gain material and dictate the flow of the game.",
+      "status": "not_started",
+      "order": 1,
+      "resources": [
+        {
+          "id": "e52027b9-3f39-44db-ad53-70e6d7f789c3",
+          "type": "video",
+          "title": "The Top 3 Chess Tactics for Beginners (Forks, Pins, Skewers)",
+          "url": "https://www.youtube.com/watch?v=A_0W03m88t8",
+          "whyChosen": "This video specifically targets beginners, breaking down the most common and effective tactical patterns simply.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "a2e7d092-a746-4f74-a8e5-c41112461827",
+          "type": "reading",
+          "title": "Learn Basic Chess Tactics",
+          "url": "https://www.chess.com/lessons/beginner-tactics/learn-basic-chess-tactics",
+          "whyChosen": "Chess.com provides an interactive lesson to practice identifying and solving these tactical puzzles.",
+          "sourceName": "Chess.com"
+        },
+        {
+          "id": "7b4eb20d-5d06-4a8e-9ce8-f515077056e3",
+          "type": "reading",
+          "title": "Chess Tactics for Beginners: The Pin, Fork, and Skewer",
+          "url": "https://www.ichess.net/blog/chess-tactics-for-beginners-pin-fork-skewer/",
+          "whyChosen": "This article offers a clear, written explanation with diagrams to solidify understanding of these crucial tactical elements.",
+          "sourceName": "Ichess"
+        }
+      ]
+    },
+    {
+      "id": "9d53681c-5e05-4191-a726-477635c7cd32",
+      "name": "Understand Simple Endgames and Basic Checkmates",
+      "description": "Many beginner games come down to simplified positions. Knowing how to checkmate with a king and a rook, or how to promote a pawn in a basic ending, is vital for converting your advantages into a win.",
+      "rationale": "Endgame knowledge ensures you can convert material advantage into a win.",
+      "status": "not_started",
+      "order": 2,
+      "resources": [
+        {
+          "id": "26f1e186-13a5-4373-835c-90ef17977f97",
+          "type": "video",
+          "title": "How to Checkmate with King and Queen (Beginner Chess Lesson)",
+          "url": "https://www.youtube.com/watch?v=wzP8wL4Qz10",
+          "whyChosen": "This video teaches a fundamental checkmate pattern that is essential for converting a material advantage into a win.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "adc4f4cf-884c-4666-9f5d-e1ef5f837d9d",
+          "type": "video",
+          "title": "Simple Endgames - Chess Strategy for Beginners",
+          "url": "https://www.youtube.com/watch?v=kYJ9g1tV-aQ",
+          "whyChosen": "This resource focuses on basic endgame principles, helping the user understand how to play in simplified positions.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "b45ade56-fc5a-458c-974f-93665b77d753",
+          "type": "reading",
+          "title": "Beginner Chess Endings Guide to Rook and Pawn Endings",
+          "url": "https://www.ichess.net/blog/beginner-chess-endings-guide-rook-pawn-endings/",
+          "whyChosen": "This article introduces basic concepts of rook and pawn endgames, which are very common and crucial to understand.",
+          "sourceName": "Ichess"
+        }
+      ]
+    },
+    {
+      "id": "d15e2076-08ee-4486-9851-b7ce3d43ae96",
+      "name": "Develop Strategic Thinking (Pawn Structure & Piece Value)",
+      "description": "Beyond immediate tactics, strategic thinking involves understanding the long-term implications of your moves. This technique covers the importance of pawn structures and the relative value of your pieces, guiding better decision-making throughout the game.",
+      "rationale": "Strategic concepts like pawn structure and piece value improve long‑term planning and position evaluation.",
+      "status": "not_started",
+      "order": 3,
+      "resources": [
+        {
+          "id": "31dd55da-149a-481e-8207-40cb00dd4af3",
+          "type": "video",
+          "title": "How to Play Chess for Beginners: Understanding Piece Values!",
+          "url": "https://www.youtube.com/watch?v=hB9N0t2N-f4",
+          "whyChosen": "This video explains the relative value of chess pieces, a foundational concept for strategic exchanges and decision-making.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "0e060e3e-a558-4ecc-a205-962129daa354",
+          "type": "video",
+          "title": "Pawn Structure Part 1: Beginner Chess Tips",
+          "url": "https://www.youtube.com/watch?v=13Q1v70kL8w",
+          "whyChosen": "This video introduces the beginner to the concept of pawn structure, an important strategic element in chess.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "7e8c4c74-16f4-475a-a24b-9d16607f4557",
+          "type": "reading",
+          "title": "What Are Passed Pawns In Chess? How To Use Them Effectively",
+          "url": "https://www.chess.com/blog/Chessable/what-are-passed-pawns-in-chess-how-to-use-them-effectively",
+          "whyChosen": "This article introduces the concept of passed pawns, a key strategic element related to pawn structure and endgames.",
+          "sourceName": "Chess.com"
+        }
+      ]
+    },
+    {
+      "id": "41454d36-baa5-4f0d-92f6-1f4b319bf610",
+      "name": "Analyze Your Own Games",
+      "description": "The most effective way to improve is to learn from your own play. This technique involves reviewing your games, identifying mistakes, and understanding why certain moves were better than others, allowing you to refine your strategy over time.",
+      "rationale": "Self‑analysis turns experience into concrete lessons and prevents repeat mistakes.",
+      "status": "not_started",
+      "order": 4,
+      "resources": [
+        {
+          "id": "28914bbb-edda-4873-8aac-91d27f9fd8f0",
+          "type": "video",
+          "title": "How to Analyze Your Chess Games to Get Better at Chess",
+          "url": "https://www.youtube.com/watch?v=L2GzWd0n24U",
+          "whyChosen": "This video provides a step-by-step guide on how a beginner can review their own games to identify areas for improvement.",
+          "sourceName": "YouTube"
+        },
+        {
+          "id": "a22fc834-8e78-4377-88f8-e624641da544",
+          "type": "reading",
+          "title": "How to Analyze Your Chess Games",
+          "url": "https://www.chess.com/article/view/how-to-analyze-your-chess-games",
+          "whyChosen": "This Chess.com article offers a written guide on game analysis, complementing video resources with detailed explanations.",
+          "sourceName": "Chess.com"
+        },
+        {
+          "id": "a789b382-fdcf-4cd4-b3c4-b6086383eb4d",
+          "type": "video",
+          "title": "How To Analyze Your Own Chess Games For Beginners",
+          "url": "https://www.youtube.com/watch?v=2r156x7L_6k",
+          "whyChosen": "Another video offering practical advice on self-analysis, ensuring the user has multiple perspectives on this crucial skill.",
+          "sourceName": "YouTube"
+        }
+      ]
+    }
+  ]
+}

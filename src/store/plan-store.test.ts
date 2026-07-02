@@ -4,6 +4,7 @@ import {
   getProgress,
   getVisibleTechniques,
   getSkippedTechniques,
+  getRoadmapZones,
 } from "./plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";
 
@@ -120,6 +121,105 @@ describe("plan-store", () => {
         makeTechnique({ id: "t2", order: 1, status: "mastered" }),
       ]);
       expect(getSkippedTechniques(plan).map((t) => t.id)).toEqual(["t1", "t3"]);
+    });
+  });
+
+  describe("getRoadmapZones", () => {
+    const ZONE_NAMES = ["Foundation Grove", "Application Forest", "Mastery Peak"];
+
+    it("normal split: 6 not-started techniques, first is current, rest available", () => {
+      const plan = makePlan(
+        Array.from({ length: 6 }, (_, i) => makeTechnique({ id: `t${i}`, order: i }))
+      );
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.map((z) => z.name)).toEqual(ZONE_NAMES);
+      expect(zones.map((z) => z.nodes.length)).toEqual([2, 2, 2]);
+      expect(zones.flatMap((z) => z.nodes.map((n) => n.technique.id))).toEqual([
+        "t0", "t1", "t2", "t3", "t4", "t5",
+      ]);
+      expect(zones[0].nodes[0].state).toBe("current");
+      expect(zones.flatMap((z) => z.nodes).slice(1).every((n) => n.state === "available")).toBe(true);
+      expect(zones.every((z) => z.zoneProgress.completed === 0 && z.zoneProgress.total === 2)).toBe(true);
+    });
+
+    it("all mastered: every node is completed, no current node", () => {
+      const plan = makePlan([
+        makeTechnique({ id: "t0", order: 0, status: "mastered" }),
+        makeTechnique({ id: "t1", order: 1, status: "mastered" }),
+        makeTechnique({ id: "t2", order: 2, status: "mastered" }),
+      ]);
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.flatMap((z) => z.nodes).every((n) => n.state === "completed")).toBe(true);
+      expect(zones.every((z) => z.zoneProgress.completed === 1 && z.zoneProgress.total === 1)).toBe(true);
+    });
+
+    it("mixed skipped/mastered/current/available: derives each state correctly and zoneProgress excludes skipped from total", () => {
+      const plan = makePlan([
+        makeTechnique({ id: "t0", order: 0, status: "mastered" }),
+        makeTechnique({ id: "t1", order: 1, status: "skipped" }),
+        makeTechnique({ id: "t2", order: 2, status: "not_started" }),
+        makeTechnique({ id: "t3", order: 3, status: "skipped" }),
+        makeTechnique({ id: "t4", order: 4, status: "not_started" }),
+      ]);
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.map((z) => z.nodes.length)).toEqual([2, 2, 1]);
+      const byId = Object.fromEntries(
+        zones.flatMap((z) => z.nodes).map((n) => [n.technique.id, n.state])
+      );
+      expect(byId).toEqual({
+        t0: "completed",
+        t1: "skipped",
+        t2: "current",
+        t3: "skipped",
+        t4: "available",
+      });
+      expect(zones[0].zoneProgress).toEqual({ completed: 1, total: 1 });
+      expect(zones[1].zoneProgress).toEqual({ completed: 0, total: 1 });
+      expect(zones[2].zoneProgress).toEqual({ completed: 0, total: 1 });
+    });
+
+    it("1 technique: collapses to a single Foundation Grove zone", () => {
+      const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.map((z) => z.name)).toEqual(["Foundation Grove"]);
+      expect(zones.map((z) => z.nodes.length)).toEqual([1]);
+      expect(zones[0].nodes[0].state).toBe("current");
+    });
+
+    it("2 techniques: collapses to Foundation Grove / Application Forest", () => {
+      const plan = makePlan([
+        makeTechnique({ id: "t0", order: 0 }),
+        makeTechnique({ id: "t1", order: 1 }),
+      ]);
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.map((z) => z.name)).toEqual(["Foundation Grove", "Application Forest"]);
+      expect(zones.map((z) => z.nodes.length)).toEqual([1, 1]);
+    });
+
+    it("0 techniques: returns no zones", () => {
+      expect(getRoadmapZones(makePlan([]))).toEqual([]);
+    });
+
+    it.each([
+      [5, [2, 2, 1]],
+      [7, [3, 2, 2]],
+      [8, [3, 3, 2]],
+    ])("uneven count %d splits into zone sizes %j, no empty zones, order preserved", (count, expectedSizes) => {
+      const plan = makePlan(
+        Array.from({ length: count }, (_, i) => makeTechnique({ id: `t${i}`, order: i }))
+      );
+      const zones = getRoadmapZones(plan);
+
+      expect(zones.map((z) => z.nodes.length)).toEqual(expectedSizes);
+      expect(zones.every((z) => z.nodes.length > 0)).toBe(true);
+      expect(zones.flatMap((z) => z.nodes.map((n) => n.technique.id))).toEqual(
+        Array.from({ length: count }, (_, i) => `t${i}`)
+      );
     });
   });
 });

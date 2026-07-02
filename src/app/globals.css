@@ -37,6 +37,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
 
   /* ── Surface layers ── */
   --color-surface-base: var(--surface-base);
@@ -95,6 +97,10 @@
   --border: #1B2130;
   --input: #1B2130;
   --ring: #EB8928;
+
+  /* ── Outline (warm neutral — "wood/stone" node family, from design.md) ── */
+  --outline: #a78b7d;
+  --outline-variant: #584236;
 
   /* ── Mascot palette ── */
   --mascot-body: #EB8928;

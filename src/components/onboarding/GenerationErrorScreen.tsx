@@ -1,6 +1,6 @@
 "use client";
 
-import { SpeechMascot } from "./SpeechMascot";
+import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 
 interface GenerationErrorScreenProps {
   onRetry: () => void;
@@ -10,7 +10,12 @@ export function GenerationErrorScreen({ onRetry }: GenerationErrorScreenProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh px-5 bg-background">
       <div className="w-full max-w-sm sm:max-w-2xl mx-auto">
-        <SpeechMascot state="error" speech="Couldn't put your plan together — mind trying again?" size="hero" />
+        <MascotWithSpeech
+          state="error"
+          message="Couldn't put your plan together — mind trying again?"
+          size="lg"
+          position="top"
+        />
       </div>
 
       <div className="w-full max-w-sm mx-auto mt-10">

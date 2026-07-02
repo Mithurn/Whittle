@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SpeechMascot } from "./SpeechMascot";
+import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "./ProgressBar";
 
 const TIME_COMMITMENT_OPTIONS = [
@@ -41,7 +41,7 @@ export function TimeCommitmentScreen({ initialValue, onNext, onBack }: TimeCommi
 
       {/* ── Content ── */}
       <div className="flex flex-col flex-1 items-center justify-center px-5 pt-20 sm:pt-0 w-full max-w-sm sm:max-w-2xl mx-auto">
-        <SpeechMascot state="idle" speech="How much time can you give this?" />
+        <MascotWithSpeech state="idle" message="How much time can you give this?" size="md" position="inline" />
 
         <div role="radiogroup" aria-label="Time commitment" className="w-full max-w-sm mx-auto mt-14 flex flex-col gap-3">
           {TIME_COMMITMENT_OPTIONS.map(({ label, description }) => {

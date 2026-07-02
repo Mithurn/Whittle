@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SignalLow, SignalMedium, SignalHigh, type LucideIcon } from "lucide-react";
-import { SpeechMascot } from "./SpeechMascot";
+import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "./ProgressBar";
 import type { SkillLevel } from "@/types/domain";
 
@@ -42,7 +42,7 @@ export function SkillLevelScreen({ initialValue, onNext, onBack }: SkillLevelScr
 
       {/* ── Content ── */}
       <div className="flex flex-col flex-1 items-center justify-center px-5 pt-20 sm:pt-0 w-full max-w-sm sm:max-w-2xl mx-auto">
-        <SpeechMascot state="idle" speech="Nice! How much do you know already?" />
+        <MascotWithSpeech state="idle" message="Nice! How much do you know already?" size="md" position="inline" />
 
         <div role="radiogroup" aria-label="Skill level" className="w-full max-w-sm mx-auto mt-14 flex flex-col gap-3">
           {SKILL_LEVELS.map(({ value, label, description, Icon }) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SpeechMascot } from "./SpeechMascot";
+import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "./ProgressBar";
 import { HOBBY_NAME_MAX } from "@/lib/schemas";
 
@@ -51,7 +51,7 @@ export function HobbyInputScreen({ initialValue, onNext, onBack }: HobbyInputScr
           Wider on sm+ so the desktop mascot+bubble row has room to breathe — the input
           itself stays pinned to max-w-sm below, independent of this outer width. ── */}
       <div className="flex flex-col flex-1 items-center justify-center px-5 w-full max-w-sm sm:max-w-2xl mx-auto">
-        <SpeechMascot state="idle" speech="What hobby are you excited about?" />
+        <MascotWithSpeech state="idle" message="What hobby are you excited about?" size="md" position="inline" />
 
         <div className="w-full max-w-sm mx-auto mt-14">
           <input

@@ -17,6 +17,9 @@ interface MascotWithSpeechProps {
    * beside the mascot — pass false to drop it for a "top"/"right" bubble
    * whose anchor point makes a left-pointing tail look disconnected. */
   showTail?: boolean;
+  /** Forwarded to Mascot — see Mascot.tsx for the one-shot playback use case. */
+  loop?: boolean;
+  onComplete?: () => void;
 }
 
 const SIZE_PX: Record<MascotWithSpeechSize, number> = {
@@ -30,12 +33,15 @@ const SIZE_PX: Record<MascotWithSpeechSize, number> = {
 // moments like the generation-error screen. See decisions.md for why the
 // per-screen bespoke versions were consolidated into this.
 //
-// "inline" never uses absolute positioning at all (plain side-by-side row,
-// identical at every width) — the safest variant, can't overflow. "top"
-// and "right" float the bubble beside the mascot without it consuming
-// layout space, but only on desktop — on mobile they still collapse to the
-// same plain row "inline" always uses, so a floated bubble can never run
-// off a narrow viewport.
+// Every position is a real flex row now — mascot first, bubble second, no
+// absolute/float anchoring anywhere. Absolute anchors were computed against
+// the mascot's bounding box, but the Lottie artwork has empty padding
+// around the character inside that box, so the anchor point never actually
+// matched where the character visually was — a flex row can't drift that
+// way. "top"/"right" (both unused with any distinct treatment currently —
+// grep before changing either) pull the bubble in with -ml-4 to bite into
+// that padding and sit tight against the mascot; "inline" already did this
+// via a plain gap.
 export function MascotWithSpeech({
   state,
   size = "md",
@@ -44,9 +50,13 @@ export function MascotWithSpeech({
   position = "inline",
   className = "",
   showTail = true,
+  loop = true,
+  onComplete,
 }: MascotWithSpeechProps) {
   const pixelSize = SIZE_PX[size];
-  const mascot = <Mascot state={state} size={pixelSize} className="shrink-0" />;
+  const mascot = (
+    <Mascot state={state} size={pixelSize} className="shrink-0" loop={loop} onComplete={onComplete} />
+  );
 
   if (position === "inline") {
     return (
@@ -57,20 +67,10 @@ export function MascotWithSpeech({
     );
   }
 
-  const desktopAnchorClass =
-    position === "top" ? "-top-2 left-[60%]" : "left-full top-8 ml-2";
-
   return (
-    <div className={`relative inline-flex ${className}`}>
+    <div className={`flex w-full flex-row items-center ${className}`}>
       {mascot}
-
-      {/* Mobile: plain row beneath the mascot, never absolutely positioned. */}
-      <div className="mt-3 md:hidden">
-        <SpeechBubble text={message} animate={animate} showTail={showTail} />
-      </div>
-
-      {/* Desktop: floats beside the mascot per `position`. */}
-      <div className={`absolute hidden max-w-[calc(100vw-2rem)] md:block ${desktopAnchorClass}`}>
+      <div className="-ml-4 max-w-[calc(100vw-2rem)]">
         <SpeechBubble text={message} animate={animate} showTail={showTail} />
       </div>
     </div>

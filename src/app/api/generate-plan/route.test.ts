@@ -85,11 +85,15 @@ describe("POST /api/generate-plan", () => {
     expect(json.techniques[0].id).toBeDefined();
     expect(json.techniques[0].status).toBe("not_started");
     expect(json.techniques[0].order).toBe(0);
-    expect(json.techniques[0].resources[0].url).toBe("https://example.com/video-1");
+    // Not the AI's raw URL — grounded URLs have 404'd in practice, so every
+    // resource is forced through a constructed, guaranteed-working search URL.
+    expect(json.techniques[0].resources[0].url).toMatch(
+      /^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/
+    );
     expect(json.techniques[0].resources[0].sourceName).toBe("Example");
   });
 
-  it("derives sourceName from known hostnames", async () => {
+  it("derives sourceName from the AI's original grounded URL even though the URL itself gets replaced", async () => {
     mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
     const plan = makeValidAiPlan();
     plan.techniques[0].resources[0].url = "https://www.youtube.com/watch?v=abc123";
@@ -99,7 +103,13 @@ describe("POST /api/generate-plan", () => {
 
     const res = await POST(makeRequest(validRequestBody));
     const json = await res.json();
+    // sourceName still reflects the real source Gemini found — badges don't
+    // flatten to a generic "Youtube"/"Google" label just because the link
+    // itself was replaced with a constructed search URL.
     expect(json.techniques[0].resources[0].sourceName).toBe("YouTube");
+    expect(json.techniques[0].resources[0].url).toMatch(
+      /^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/
+    );
   });
 
   it("returns 400 for an invalid request body", async () => {

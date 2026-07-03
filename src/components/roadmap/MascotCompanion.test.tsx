@@ -74,4 +74,22 @@ describe("MascotCompanion", () => {
       screen.getAllByText("You've skipped everything in this plan — want to start fresh?").length
     ).toBeGreaterThan(0);
   });
+
+  it("shows overrideMessage (technique.rationale) instead of the computed progress message while a technique is open, and hides the mobile mascot block", () => {
+    const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
+    render(
+      <MascotCompanion plan={plan} isTechniqueOpen overrideMessage="Forks and pins are the bread and butter." />
+    );
+    // MascotWithSpeech's "top" position renders its own mobile-collapsed and
+    // desktop-floated copies of the same text (see MascotWithSpeech.tsx) —
+    // getAllByText, same as this file's other assertions, not exactly-one.
+    expect(screen.getAllByText("Forks and pins are the bread and butter.").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Ready to light the first fire?")).not.toBeInTheDocument();
+  });
+
+  it("shows the celebration copy when celebrating, overriding both progress message and overrideMessage", () => {
+    const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
+    render(<MascotCompanion plan={plan} isTechniqueOpen={false} celebrating />);
+    expect(screen.getAllByText("Nice — that's one more in the bag.").length).toBeGreaterThan(0);
+  });
 });

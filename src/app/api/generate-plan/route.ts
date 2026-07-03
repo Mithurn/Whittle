@@ -62,8 +62,17 @@ const AI_PLAN_JSON_SCHEMA = {
   additionalProperties: false,
 } as const;
 
+// Enforced again at the prompt level in buildGroundedPrompt/buildUngroundedPrompt
+// (where the content is actually written) — not a Zod .max() (deliberately
+// skipped: a hard schema cap would fail the whole plan over one long
+// sentence). SpeechBubble.tsx's line-clamp-3 is the guaranteed visual
+// backstop regardless of what the model actually sends.
+const RATIONALE_LENGTH_RULE =
+  `Keep each technique's "rationale" short and punchy — one sentence, maximum 15 words, no matter how long the source material is.`;
+
 const STRUCTURING_SYSTEM_PROMPT =
-  "Convert the input into JSON matching the schema exactly. Preserve any URLs and titles exactly as given in the input — do not alter or invent them.";
+  "Convert the input into JSON matching the schema exactly. Preserve any URLs and titles exactly as given in the input — do not alter or invent them. " +
+  RATIONALE_LENGTH_RULE;
 
 function describeInput(input: GeneratePlanRequest): string {
   const known =
@@ -80,7 +89,7 @@ const SEQUENCING_RULE =
 function buildGroundedPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ` +
+    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `Tailor the plan to the stated skill level, goal, and what they already know. For each technique, use Google Search to find ` +
     `1-3 real, currently-live resources (a mix of video/reading/audio where sensible for a physical or practical skill — ` +
     `never audio-only for a technique that requires seeing physical form). Each resource's URL must point to a genuinely distinct ` +
@@ -92,7 +101,7 @@ function buildGroundedPrompt(input: GeneratePlanRequest): string {
 function buildUngroundedPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ` +
+    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `Tailor the plan to the stated skill level, goal, and what they already know. You do not have access to live search, so for each ` +
     `technique's 1-3 resources, write a plausible title and resource type (a mix of video/reading/audio where sensible — never ` +
     `audio-only for a technique that requires seeing physical form) and a one-line reason it fits this user. For the "url" field, ` +
@@ -232,18 +241,11 @@ function constructSearchUrl(resource: { type: string; title: string }, hobbyName
     : `https://www.google.com/search?q=${query}`;
 }
 
+// No post-processing needed here anymore — toHobbyPlan now forces every
+// resource's url through constructSearchUrl regardless of path, so the
+// per-resource rewrite that used to live here is redundant.
 async function generateUngroundedPlan(input: GeneratePlanRequest): Promise<AIPlanResponse> {
-  const plan = await structureWithFallback(buildUngroundedPrompt(input));
-  return {
-    ...plan,
-    techniques: plan.techniques.map((technique) => ({
-      ...technique,
-      resources: technique.resources.map((resource) => ({
-        ...resource,
-        url: constructSearchUrl(resource, input.hobbyName),
-      })),
-    })),
-  };
+  return structureWithFallback(buildUngroundedPrompt(input));
 }
 
 function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyPlan {
@@ -268,7 +270,14 @@ function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyP
           id: crypto.randomUUID(),
           type: resource.type,
           title: resource.title,
-          url: resource.url,
+          // Even grounded URLs from Gemini's search have turned out to
+          // 404 in practice — every resource link is forced through a
+          // constructed search URL so it's always guaranteed to resolve.
+          url: constructSearchUrl(resource, input.hobbyName),
+          // Derived from the AI's original URL (grounded: a real search
+          // hit; ungrounded: a placeholder), not the constructed one —
+          // otherwise every badge would flatten to just "Youtube"/"Google"
+          // and lose the source variety the grounded path actually found.
           sourceName: deriveSourceName(resource.url),
           whyChosen: resource.whyChosen,
         })

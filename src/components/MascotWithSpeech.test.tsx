@@ -31,13 +31,13 @@ describe("MascotWithSpeech", () => {
     expect(screen.getAllByText("Nice! How much do you know already?")).toHaveLength(1);
   });
 
-  it("'top' and 'right' render one shared mascot but two bubble instances (mobile row + desktop float), so a floated bubble can never overflow on mobile", () => {
+  it("'top' and 'right' render exactly one mascot and one bubble instance, in a single flex row (no absolute-positioned float)", () => {
     for (const position of ["top", "right"] as const) {
       const { unmount } = render(
         <MascotWithSpeech state="error" message="Couldn't put your plan together" position={position} />
       );
       expect(screen.getAllByTestId("mascot")).toHaveLength(1);
-      expect(screen.getAllByText("Couldn't put your plan together")).toHaveLength(2);
+      expect(screen.getAllByText("Couldn't put your plan together")).toHaveLength(1);
       unmount();
     }
   });

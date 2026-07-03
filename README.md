@@ -34,7 +34,7 @@ There are no accounts and no backend database. That's a deliberate call, not a m
 
 ## Live Demo & Walkthrough
 
-- **Live demo:** _coming soon_
+- **Live demo:** [whittle-hobbies.vercel.app](https://whittle-hobbies.vercel.app/)
 - **Loom walkthrough:** _coming soon_
 
 ## Key Features
@@ -125,3 +125,7 @@ npm run dev      # start the dev server at localhost:3000
 npm test         # run the test suite (149 tests, fully mocked — no live API calls)
 npm run build    # production build
 ```
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

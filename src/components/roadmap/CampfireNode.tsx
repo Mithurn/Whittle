@@ -145,7 +145,12 @@ export function CampfireNode({ node, onClick, className = "" }: CampfireNodeProp
       )}
 
       {state === "available" && (
-        <span className="relative flex size-full items-center justify-center rounded-full bg-outline-variant border border-outline/50 opacity-70 transition-shadow duration-150 hover:shadow-[0_0_12px_2px_rgba(235,137,40,0.25)]">
+        // bg-outline-variant is fully opaque here on purpose — this used to
+        // carry opacity-70 on the whole span (border + icon + background
+        // together), which read fine over a dark canvas but let the
+        // connector line bleed straight through the circle over a light
+        // background. Muting now lives only on the border/icon (/50 below).
+        <span className="relative flex size-full items-center justify-center rounded-full bg-outline-variant border border-outline/50 transition-shadow duration-150 hover:shadow-[0_0_12px_2px_rgba(235,137,40,0.25)]">
           {/* Unlit crossed logs + smoke — "not yet touched", same thin-stroke
               language as skipped's SkipForward icon (no lucide equivalent
               exists for this one, so it's hand-drawn to match). */}
@@ -171,7 +176,10 @@ export function CampfireNode({ node, onClick, className = "" }: CampfireNodeProp
       )}
 
       {state === "skipped" && (
-        <span className="relative flex size-full items-center justify-center rounded-full bg-outline-variant border border-outline/50 opacity-50">
+        // Same fix as "available" — bg-outline-variant fully opaque, the
+        // charred-edge look now comes only from the ring overlay + icon
+        // opacity below, not a see-through background.
+        <span className="relative flex size-full items-center justify-center rounded-full bg-outline-variant border border-outline/50">
           <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/40" />
           <SkipForward size={20} className="text-outline/50" aria-hidden="true" />
         </span>

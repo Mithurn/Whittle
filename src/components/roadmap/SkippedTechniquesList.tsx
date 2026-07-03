@@ -32,7 +32,7 @@ export function SkippedTechniquesList({ plan }: SkippedTechniquesListProps) {
         type="button"
         onClick={() => setExpanded((e) => !e)}
         aria-expanded={expanded}
-        className="inline-flex min-h-11 items-center gap-1 rounded-md px-1 font-label text-xs font-semibold tracking-wide text-text-muted uppercase transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
+        className="inline-flex min-h-11 items-center gap-1 rounded-md px-1 font-label text-xs font-semibold tracking-wide text-text-primary uppercase opacity-80 transition-opacity duration-150 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
       >
         {skipped.length} skipped
         {expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}

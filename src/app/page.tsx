@@ -65,7 +65,6 @@ export default function Home() {
           <MascotCompanion
             plan={currentPlan}
             isTechniqueOpen={selectedTechniqueId !== null}
-            overrideMessage={selectedTechnique?.rationale}
             celebrating={celebrating}
             onCelebrationEnd={() => setCelebrating(false)}
           />

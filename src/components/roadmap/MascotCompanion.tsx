@@ -11,9 +11,6 @@ interface MascotCompanionProps {
   plan: HobbyPlan;
   /** True while the technique modal (modal/bottom sheet) is open. */
   isTechniqueOpen: boolean;
-  /** Shown instead of the computed progress message — used to surface
-   * technique.rationale while TechniqueModal is open (see page.tsx). */
-  overrideMessage?: string;
   /** True for the one scoped mastered-celebration beat (motion-system.md):
    * forces the "success" state, plays its Lottie once instead of looping,
    * and clears itself via onCelebrationEnd when that single playback ends. */
@@ -71,13 +68,12 @@ function pickMascotState(
 export function MascotCompanion({
   plan,
   isTechniqueOpen,
-  overrideMessage,
   celebrating = false,
   onCelebrationEnd,
 }: MascotCompanionProps) {
   const progress = getProgress(plan);
   const mascotState = pickMascotState(progress, isTechniqueOpen, celebrating);
-  const speech = celebrating ? MESSAGE_CELEBRATING : (overrideMessage ?? pickMessage(progress));
+  const speech = celebrating ? MESSAGE_CELEBRATING : pickMessage(progress);
   // Only the celebration plays once — every other state keeps looping as before.
   const loop = !celebrating;
   const onComplete = celebrating ? onCelebrationEnd : undefined;
@@ -115,7 +111,16 @@ export function MascotCompanion({
         {/* showTail=true: now that "top" lays the bubble out in a real flex
             row beside the mascot (see MascotWithSpeech.tsx) instead of
             floating above it, the left-pointing tail correctly connects to
-            the mascot again. */}
+            the mascot again.
+            showBubble={!isTechniqueOpen}: the bubble showed technique.rationale
+            while a technique was open, at unclamped/arbitrary length — that
+            collided with TechniqueModal at real desktop widths (~768-1440px)
+            no position/max-width tuning could reliably clear, since the
+            rail's own footprint was the actual problem, not the modal's
+            placement. The modal already shows the technique's full
+            description, so this is dropping a redundant, geometry-breaking
+            copy of it, not losing information — the "explaining" animation
+            alone still communicates the mascot's reacting to the open node. */}
         <MascotWithSpeech
           state={mascotState}
           message={speech}
@@ -124,6 +129,7 @@ export function MascotCompanion({
           showTail
           loop={loop}
           onComplete={onComplete}
+          showBubble={!isTechniqueOpen}
         />
         {/* Pinned to the mascot's own 320px (lg) width explicitly — the
             parent rail in page.tsx no longer has a fixed width itself (that

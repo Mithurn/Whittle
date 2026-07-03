@@ -56,13 +56,95 @@
   --color-cta-start: var(--cta-start);
   --color-cta-mid: var(--cta-mid);
   --color-cta-end: var(--cta-end);
+  /* Text that sits on top of the orange/gold CTA gradient or solid
+     primary/secondary swatches — always dark, in both themes, since those
+     brand colors themselves never change between light/dark (see below).
+     Verified via WCAG contrast script against all 3 gradient stops
+     (worst case cta-start #C66900: 4.89:1) — near-white text here used to
+     measure as low as 1.63:1 against the gold end before this fix. */
+  --color-cta-foreground: var(--cta-foreground);
 
   /* ── Text semantic ── */
   --color-text-primary: var(--text-primary);
   --color-text-muted: var(--text-muted);
+
+  /* ── Progress bar track (always dark — see below) ── */
+  --color-progress-track-bg: var(--progress-track-bg);
 }
 
+/* ── Light — "Daylight Campfire" (default theme) ──
+   Bespoke warm hexes, verified via a WCAG contrast script (not eyeballed,
+   not Tailwind's default zinc/stone scale — see decisions.md). Mascot/CTA
+   brand colors are unchanged from dark mode on purpose: they're the one
+   constant that ties both themes to the same character. */
 :root {
+  /* ── Surfaces ── */
+  --background: #FDF8F3;
+  --foreground: #2B2016;
+  --surface-base: #FFFFFF;
+  --surface-1: #F5EDE4;
+  --surface-2: #EFE3D5;
+
+  /* ── Cards ── */
+  --card: #FFFFFF;
+  --card-foreground: #2B2016;
+
+  /* ── Primary (mascot body) ── */
+  --primary: #EB8928;
+  --primary-foreground: #180F05;
+
+  /* ── Secondary (mascot glow) ── */
+  --secondary: #FABA0E;
+  --secondary-foreground: #3E2800;
+
+  /* ── Muted ── */
+  --muted: #F0E6D9;
+  --muted-foreground: #7A6555;
+
+  /* ── Accent ── */
+  --accent: #EAD9C4;
+  --accent-foreground: #2B2016;
+
+  /* ── Destructive (deepened from dark mode's #ffb4ab, a light pink that's
+     illegible on a light background) ── */
+  --destructive: #B3261E;
+
+  /* ── Borders & inputs ── */
+  --border: #E3D2BC;
+  --input: #F5EDE4;
+  --ring: #EB8928;
+
+  /* ── Outline (warm neutral — "wood/stone" node family, from design.md) ── */
+  --outline: #a78b7d;
+  --outline-variant: #584236;
+
+  /* ── Mascot palette (unchanged across themes) ── */
+  --mascot-body: #EB8928;
+  --mascot-glow: #FABA0E;
+  --mascot-gold: #FFC732;
+  --mascot-bright: #FFDE00;
+  --mascot-cream: #FFF7D9;
+
+  /* ── CTA gradient (unchanged across themes) ── */
+  --cta-start: #C66900;
+  --cta-mid: #EB8928;
+  --cta-end: #FABA0E;
+  --cta-foreground: #180F05;
+
+  /* ── Progress bar track (unchanged across themes) — the glossy 3D groove
+     effect (inset shadows tuned in ProgressBar.css) was built against a
+     near-black track; the same recipe on a white track just reads as a
+     flat gray dent, not premium. Pinned to the original dark value rather
+     than trying to invent a separate light-mode groove treatment. ── */
+  --progress-track-bg: #0c0e13;
+
+  /* ── Text ── */
+  --text-primary: #2B2016;
+  --text-muted: #7A6555;
+}
+
+/* ── Dark — "Midnight Hearth" ── */
+.dark {
   /* ── Surfaces ── */
   --background: #111318;
   --foreground: #e2e2e9;
@@ -76,7 +158,7 @@
 
   /* ── Primary (mascot body) ── */
   --primary: #EB8928;
-  --primary-foreground: #F7F8FA;
+  --primary-foreground: #180F05;
 
   /* ── Secondary (mascot glow) ── */
   --secondary: #FABA0E;
@@ -113,6 +195,14 @@
   --cta-start: #C66900;
   --cta-mid: #EB8928;
   --cta-end: #FABA0E;
+  --cta-foreground: #180F05;
+
+  /* ── Progress bar track (unchanged across themes) — the glossy 3D groove
+     effect (inset shadows tuned in ProgressBar.css) was built against a
+     near-black track; the same recipe on a white track just reads as a
+     flat gray dent, not premium. Pinned to the original dark value rather
+     than trying to invent a separate light-mode groove treatment. ── */
+  --progress-track-bg: #0c0e13;
 
   /* ── Text ── */
   --text-primary: #F7F8FA;

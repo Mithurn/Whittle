@@ -30,6 +30,14 @@ interface MascotWithSpeechProps {
   /** Forwarded to Mascot — see Mascot.tsx for the one-shot playback use case. */
   loop?: boolean;
   onComplete?: () => void;
+  /** False renders just the mascot, no SpeechBubble — for when the bubble's
+   * content would be redundant with (and geometrically conflict with) other
+   * on-screen content. See MascotCompanion.tsx: the rail's bubble is hidden
+   * by this while TechniqueModal is open, since arbitrary-length rationale
+   * text there was colliding with the modal at real desktop widths no fixed
+   * position/max-width combination could reliably clear. Defaults to true so
+   * every existing caller keeps showing its bubble unchanged. */
+  showBubble?: boolean;
 }
 
 const SIZE_PX: Record<MascotWithSpeechSize, number> = {
@@ -62,11 +70,16 @@ export function MascotWithSpeech({
   showTail = true,
   loop = true,
   onComplete,
+  showBubble = true,
 }: MascotWithSpeechProps) {
   const pixelSize = SIZE_PX[size];
   const mascot = (
     <Mascot state={state} size={pixelSize} className="shrink-0" loop={loop} onComplete={onComplete} />
   );
+
+  if (!showBubble) {
+    return <div className={className}>{mascot}</div>;
+  }
 
   if (position === "inline") {
     return (

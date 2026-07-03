@@ -84,7 +84,7 @@ export function HobbyInputScreen({ initialValue, onNext, onBack }: HobbyInputScr
           className="
             w-full py-4 rounded-[18px]
             bg-gradient-to-r from-cta-start via-cta-mid to-cta-end
-            font-label text-base font-semibold tracking-wide text-text-primary
+            font-label text-base font-semibold tracking-wide text-cta-foreground
             shadow-[0_0_12px_rgba(198,105,0,0.3)]
             hover:shadow-[0_0_20px_rgba(198,105,0,0.5)]
             hover:scale-[1.02]

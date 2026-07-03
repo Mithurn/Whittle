@@ -43,7 +43,7 @@ export function StartOverAction() {
     <button
       type="button"
       onClick={() => setConfirming(true)}
-      className="min-h-11 rounded-md px-3 font-label text-xs font-medium text-text-muted transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
+      className="min-h-11 rounded-md px-3 font-label text-xs font-medium text-text-primary opacity-80 transition-opacity duration-150 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
     >
       Start over
     </button>

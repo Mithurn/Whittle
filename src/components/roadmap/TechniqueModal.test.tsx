@@ -65,82 +65,168 @@ describe("TechniqueModal", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("shows the technique name, description, and each resource's title/source/why-chosen on desktop", () => {
+  it("shows the technique name and description in the header", () => {
     render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Forking")).toBeInTheDocument();
     expect(screen.getByText("A tactic that attacks two pieces at once.")).toBeInTheDocument();
-    expect(screen.getByText("Mastering the Fork")).toBeInTheDocument();
-    expect(screen.getByText("YouTube")).toBeInTheDocument();
-    expect(screen.getByText("Grandmaster analysis of double attacks.")).toBeInTheDocument();
-    expect(screen.getByText("The Pin Theory")).toBeInTheDocument();
   });
 
-  it("links a non-embeddable, non-reading resource directly to its real URL, opened in a new tab", () => {
+  it("defaults to the Video tab and embeds the YouTube resource natively", () => {
     render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-    const link = screen.getByText("Tactics Podcast Ep. 3").closest("a");
-    expect(link).toHaveAttribute("href", "https://podcasts.example.com/ep3");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
-  });
-
-  it("renders a reading resource as a button, not a link out", () => {
-    render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-    expect(screen.getByText("The Pin Theory").closest("a")).not.toBeInTheDocument();
-    expect(screen.getByText("The Pin Theory").closest("button")).toBeInTheDocument();
-  });
-
-  it("embeds a YouTube resource natively instead of linking out", () => {
-    render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-    expect(screen.getByText("Mastering the Fork").closest("a")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /video/i })).toHaveAttribute("aria-selected", "true");
     const iframe = screen.getByTitle("Mastering the Fork");
     expect(iframe.tagName).toBe("IFRAME");
     expect(iframe).toHaveAttribute("src", "https://www.youtube.com/embed/abc");
   });
 
-  it("falls back to an external link when a video-typed resource isn't actually a YouTube URL", () => {
-    const nonYouTubeVideoTechnique: Technique = {
+  it("shows all four tabs when the technique has video, reading, and audio resources", () => {
+    render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: /video/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /reading/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /audio/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /master/i })).toBeInTheDocument();
+  });
+
+  it("puts a video-typed resource that isn't actually YouTube in the Audio tab instead of Video", async () => {
+    const user = userEvent.setup();
+    const mixedTechnique: Technique = {
       ...technique,
       resources: [
-        {
-          id: "r2",
-          type: "video",
-          title: "Some Other Video Host",
-          url: "https://vimeo.com/12345",
-          sourceName: "Vimeo",
-          whyChosen: "x",
-        },
+        { id: "rx", type: "video", title: "Some Other Host", url: "https://vimeo.com/12345", sourceName: "Vimeo", whyChosen: "x" },
       ],
     };
-    render(
-      <TechniqueModal technique={nonYouTubeVideoTechnique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />
-    );
-    const link = screen.getByText("Some Other Video Host").closest("a");
+    render(<TechniqueModal technique={mixedTechnique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+    expect(screen.queryByRole("tab", { name: /video/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /audio/i }));
+    const link = screen.getByText("Some Other Host").closest("a");
     expect(link).toHaveAttribute("href", "https://vimeo.com/12345");
   });
 
-  it("marks the technique mastered, closes, and fires onMastered when the primary CTA is used", async () => {
-    const onClose = vi.fn();
-    const onMastered = vi.fn();
-    render(<TechniqueModal technique={technique} isMobile={false} onClose={onClose} onMastered={onMastered} />);
-
-    await userEvent.click(screen.getByRole("button", { name: /mark as mastered/i }));
-
-    expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("mastered");
-    expect(onClose).toHaveBeenCalled();
-    expect(onMastered).toHaveBeenCalled();
+  it("puts an audio-typed resource that actually resolves to YouTube in the Video tab", () => {
+    const youtubeAudioTechnique: Technique = {
+      ...technique,
+      resources: [
+        { id: "ry", type: "audio", title: "Podcast (actually YouTube)", url: "https://youtube.com/watch?v=xyz", sourceName: "YouTube", whyChosen: "x" },
+      ],
+    };
+    render(<TechniqueModal technique={youtubeAudioTechnique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+    expect(screen.queryByRole("tab", { name: /audio/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /video/i })).toBeInTheDocument();
+    expect(screen.getByTitle("Podcast (actually YouTube)")).toHaveAttribute(
+      "src",
+      "https://www.youtube.com/embed/xyz"
+    );
   });
 
-  it("marks the technique skipped, closes, and does NOT fire onMastered when skip is used", async () => {
-    const onClose = vi.fn();
-    const onMastered = vi.fn();
-    render(<TechniqueModal technique={technique} isMobile={false} onClose={onClose} onMastered={onMastered} />);
+  describe("Reading tab", () => {
+    const originalFetch = global.fetch;
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
 
-    await userEvent.click(screen.getByRole("button", { name: /skip this technique/i }));
+    it("auto-fetches and renders the article as soon as the tab is opened, no extra click", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ content: "# The Pin\n\nA real pinned piece can't move." }),
+      }) as unknown as typeof fetch;
 
-    expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("skipped");
-    expect(onClose).toHaveBeenCalled();
-    expect(onMastered).not.toHaveBeenCalled();
+      const user = userEvent.setup();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await user.click(screen.getByRole("tab", { name: /reading/i }));
+
+      expect(await screen.findByText("A real pinned piece can't move.")).toBeInTheDocument();
+    });
+
+    it("falls back to a clickable external-link card when the fetch fails, without popping a new tab automatically", async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: false }) as unknown as typeof fetch;
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+      const user = userEvent.setup();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await user.click(screen.getByRole("tab", { name: /reading/i }));
+
+      const link = await screen.findByText(/couldn't load this article in-app/i);
+      expect(link.closest("a")).toHaveAttribute("href", "https://chess.com/pin-theory");
+      expect(openSpy).not.toHaveBeenCalled();
+
+      openSpy.mockRestore();
+    });
+  });
+
+  describe("Master tab", () => {
+    it("shows the rationale and both actions", async () => {
+      const user = userEvent.setup();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await user.click(screen.getByRole("tab", { name: /master/i }));
+
+      expect(screen.getByText("Forks and pins are the bread and butter of any master's toolkit.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /mark as mastered/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /skip this technique/i })).toBeInTheDocument();
+    });
+
+    it("marks the technique mastered, closes, and fires onMastered", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onMastered = vi.fn();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={onClose} onMastered={onMastered} />);
+
+      await user.click(screen.getByRole("tab", { name: /master/i }));
+      await user.click(screen.getByRole("button", { name: /mark as mastered/i }));
+
+      expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("mastered");
+      expect(onClose).toHaveBeenCalled();
+      expect(onMastered).toHaveBeenCalled();
+    });
+
+    it("marks the technique skipped, closes, and does NOT fire onMastered", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onMastered = vi.fn();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={onClose} onMastered={onMastered} />);
+
+      await user.click(screen.getByRole("tab", { name: /master/i }));
+      await user.click(screen.getByRole("button", { name: /skip this technique/i }));
+
+      expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("skipped");
+      expect(onClose).toHaveBeenCalled();
+      expect(onMastered).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Notes panel", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("opens on click, and autosaves typed notes (debounced) via updateTechniqueNotes", async () => {
+      const user = userEvent.setup();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+
+      await user.click(screen.getByRole("button", { name: /open my learning notes/i }));
+      const textarea = screen.getByPlaceholderText(/jot down anything/i);
+      await user.type(textarea, "Remember to check for forks after every trade.");
+
+      vi.advanceTimersByTime(500);
+
+      expect(usePlanStore.getState().currentPlan?.techniques[0].notes).toBe(
+        "Remember to check for forks after every trade."
+      );
+    });
+
+    it("closes via the close button", async () => {
+      const user = userEvent.setup();
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+
+      await user.click(screen.getByRole("button", { name: /open my learning notes/i }));
+      expect(screen.getByPlaceholderText(/jot down anything/i)).toHaveAttribute("tabIndex", "0");
+
+      await user.click(screen.getByRole("button", { name: /close notes/i }));
+      expect(screen.getByPlaceholderText(/jot down anything/i)).toHaveAttribute("tabIndex", "-1");
+    });
   });
 
   it("renders as a plain sheet on mobile — no mascot or speech bubble, just the drawer content", () => {
@@ -148,67 +234,5 @@ describe("TechniqueModal", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Forking")).toBeInTheDocument();
     expect(screen.queryByTestId("mascot")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Forks and pins are the bread and butter of any master's toolkit.")
-    ).not.toBeInTheDocument();
-  });
-
-  describe("reader mode", () => {
-    const originalFetch = global.fetch;
-
-    afterEach(() => {
-      global.fetch = originalFetch;
-    });
-
-    it("fetches and shows the article in-place, with a working back button", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ content: "# The Pin\n\nA real pinned piece can't move." }),
-      }) as unknown as typeof fetch;
-
-      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-      await userEvent.click(screen.getByText("The Pin Theory"));
-
-      expect(await screen.findByText("A real pinned piece can't move.")).toBeInTheDocument();
-      // Swapped in-place — description/resource list are gone, not stacked under it.
-      expect(screen.queryByText("A tactic that attacks two pieces at once.")).not.toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole("button", { name: /back to technique/i }));
-      expect(screen.getByText("A tactic that attacks two pieces at once.")).toBeInTheDocument();
-      expect(screen.queryByText("A real pinned piece can't move.")).not.toBeInTheDocument();
-    });
-
-    it("does not refetch when reopening the same resource after going back", async () => {
-      const fetchMock = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ content: "Cached content." }),
-      });
-      global.fetch = fetchMock as unknown as typeof fetch;
-
-      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-      await userEvent.click(screen.getByText("The Pin Theory"));
-      await screen.findByText("Cached content.");
-      await userEvent.click(screen.getByRole("button", { name: /back to technique/i }));
-      await userEvent.click(screen.getByText("The Pin Theory"));
-
-      expect(await screen.findByText("Cached content.")).toBeInTheDocument();
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("falls back to opening the real URL when the fetch fails, without leaving a broken reader view", async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: false }) as unknown as typeof fetch;
-      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
-
-      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-      await userEvent.click(screen.getByText("The Pin Theory"));
-
-      await vi.waitFor(() => {
-        expect(openSpy).toHaveBeenCalledWith("https://chess.com/pin-theory", "_blank", "noopener,noreferrer");
-      });
-      // Back to the normal technique view, not stuck showing a broken reader pane.
-      expect(screen.getByText("A tactic that attacks two pieces at once.")).toBeInTheDocument();
-
-      openSpy.mockRestore();
-    });
   });
 });

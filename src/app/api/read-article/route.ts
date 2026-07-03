@@ -20,6 +20,21 @@ function isPrivateOrLoopback(hostname: string): boolean {
   return false;
 }
 
+const JINA_MARKDOWN_MARKER = "Markdown Content:";
+
+// r.jina.ai's response always leads with its own "Title:/URL Source:/
+// Published Time:" metadata block before the real article text — we
+// already show our own resource.title/sourceName in the UI, so this is
+// pure noise that was otherwise rendering as visible plain-text lines
+// above the actual article. Falls back to the raw text unchanged if the
+// marker isn't found, rather than risk truncating real content on a
+// format jina hasn't used yet.
+function stripJinaMetadataHeader(raw: string): string {
+  const markerIndex = raw.indexOf(JINA_MARKDOWN_MARKER);
+  if (markerIndex === -1) return raw;
+  return raw.slice(markerIndex + JINA_MARKDOWN_MARKER.length).trim();
+}
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
   if (!url) {
@@ -50,7 +65,7 @@ export async function GET(req: NextRequest) {
     if (!res.ok) {
       return NextResponse.json({ error: "Could not fetch article" }, { status: 502 });
     }
-    const content = await res.text();
+    const content = stripJinaMetadataHeader(await res.text());
     if (!content.trim()) {
       return NextResponse.json({ error: "Article was empty" }, { status: 502 });
     }

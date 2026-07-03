@@ -30,6 +30,35 @@ describe("GET /api/read-article", () => {
     expect(json.content).toBe("# Real Article\n\nSome real content.");
   });
 
+  it("strips r.jina.ai's own Title/URL Source/Published Time metadata header before returning content", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      text: async () =>
+        "Title: Intro To MTB\n\n" +
+        "URL Source: https://example.com/mtb\n\n" +
+        "Published Time: 2025-09-09T10:08:48Z\n\n" +
+        "Markdown Content:\n" +
+        "# Real heading\n\nThe actual article text.",
+    })) as unknown as typeof fetch;
+
+    const res = await GET(makeRequest("https://example.com/mtb"));
+    const json = await res.json();
+    expect(json.content).toBe("# Real heading\n\nThe actual article text.");
+    expect(json.content).not.toContain("Title:");
+    expect(json.content).not.toContain("URL Source:");
+  });
+
+  it("returns the raw text unchanged if the jina metadata marker isn't present", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      text: async () => "Just plain content with no jina header at all.",
+    })) as unknown as typeof fetch;
+
+    const res = await GET(makeRequest("https://example.com/plain"));
+    const json = await res.json();
+    expect(json.content).toBe("Just plain content with no jina header at all.");
+  });
+
   it("returns 400 when the url parameter is missing", async () => {
     const res = await GET(makeRequest());
     expect(res.status).toBe(400);

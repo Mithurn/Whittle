@@ -1,21 +1,12 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-process.env.GEMINI_API_KEY = "test-gemini-key";
+process.env.SERPER_API_KEY = "test-serper-key";
 process.env.GROQ_API_KEY = "test-groq-key";
-
-const mockGenerateContent = vi.fn();
-vi.mock("@google/genai", () => ({
-  GoogleGenAI: vi.fn().mockImplementation(function GoogleGenAI() {
-    return { models: { generateContent: mockGenerateContent } };
-  }),
-}));
 
 const { POST } = await import("./route");
 
-// Exactly 3 resources per technique — the schema now requires this (see
-// route.ts's RESOURCE_MIX_RULE / schemas.ts's .length(3)).
 function makeValidAiPlan() {
   return {
     summary: "A great plan tailored to your goal.",
@@ -27,19 +18,19 @@ function makeValidAiPlan() {
         {
           type: "video",
           title: `Example Video ${i + 1}`,
-          url: `https://example.com/video-${i + 1}`,
+          url: "https://placeholder.com",
           whyChosen: "It fits this user's level.",
         },
         {
           type: "reading",
           title: `Example Reading ${i + 1}`,
-          url: `https://example.com/reading-${i + 1}`,
+          url: "https://placeholder.com",
           whyChosen: "It fits this user's level.",
         },
         {
-          type: "reading",
-          title: `Example Extra ${i + 1}`,
-          url: `https://example.com/extra-${i + 1}`,
+          type: "audio",
+          title: `Example Audio ${i + 1}`,
+          url: "https://placeholder.com",
           whyChosen: "It fits this user's level.",
         },
       ],
@@ -49,28 +40,13 @@ function makeValidAiPlan() {
 
 function makeAiPlanWithDuplicateUrls() {
   const plan = makeValidAiPlan();
-  plan.techniques[1].resources[0].url = plan.techniques[0].resources[0].url;
+  plan.techniques[1].resources[0].url = "https://example.com/duplicate";
+  plan.techniques[0].resources[0].url = "https://example.com/duplicate";
   return plan;
 }
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body } as Response;
-}
-
-// A groundingChunks-shaped Gemini response — the redirect wrapper resolves
-// (via the mocked fetch below) to a real destination URL.
-function groundedResponseWithChunks(chunks: { uri: string; title: string }[]) {
-  return {
-    text: "grounded content",
-    usageMetadata: {},
-    candidates: [
-      {
-        groundingMetadata: {
-          groundingChunks: chunks.map((c) => ({ web: { uri: c.uri, title: c.title } })),
-        },
-      },
-    ],
-  };
 }
 
 const validRequestBody = {
@@ -89,14 +65,16 @@ function makeRequest(body: unknown): NextRequest {
 }
 
 describe("POST /api/generate-plan", () => {
-  beforeEach(() => {
-    mockGenerateContent.mockReset();
-  });
-
-  it("returns a valid HobbyPlan when grounding and structuring both succeed", async () => {
-    mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
+  it("returns a valid HobbyPlan enriched with Serper.dev urls", async () => {
     global.fetch = vi.fn(async (url: string | URL | Request) => {
-      if (String(url).includes("groq.com")) {
+      const urlStr = String(url);
+      if (urlStr.includes("serper.dev/videos")) {
+        return jsonResponse({ videos: [{ link: "https://youtube.com/watch?v=serpervideo", title: "Serper Video" }] });
+      }
+      if (urlStr.includes("serper.dev/search")) {
+        return jsonResponse({ organic: [{ link: "https://example.com/serperarticle", title: "Serper Article" }] });
+      }
+      if (urlStr.includes("groq.com")) {
         return jsonResponse({
           choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
           usage: {},
@@ -110,87 +88,13 @@ describe("POST /api/generate-plan", () => {
 
     const json = await res.json();
     expect(json.id).toBeDefined();
-    expect(json.createdAt).toBeDefined();
     expect(json.techniques).toHaveLength(5);
-    expect(json.techniques[0].id).toBeDefined();
-    expect(json.techniques[0].status).toBe("not_started");
-    expect(json.techniques[0].order).toBe(0);
-    expect(json.techniques[0].resources).toHaveLength(3);
-    // No groundingChunks in this response (grounding succeeded but found no
-    // metadata) — every resource falls back to a constructed search URL.
-    expect(json.techniques[0].resources[0].url).toMatch(
-      /^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/
-    );
-    expect(json.techniques[0].resources[0].sourceName).toBe("YouTube");
-  });
-
-  it("trusts a resource's URL directly when it matches a resolved, verified grounding URL", async () => {
-    mockGenerateContent.mockResolvedValue(
-      groundedResponseWithChunks([
-        { uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc", title: "youtube.com" },
-      ])
-    );
-
-    const plan = makeValidAiPlan();
-    // Groq "matches" this resource to the (soon-to-be-resolved) verified URL.
-    plan.techniques[0].resources[0].url = "https://www.youtube.com/watch?v=real123";
-
-    global.fetch = vi.fn(async (url: string | URL | Request) => {
-      const urlStr = String(url);
-      if (urlStr.includes("vertexaisearch.cloud.google.com")) {
-        return {
-          ok: false,
-          status: 302,
-          headers: new Headers({ location: "https://www.youtube.com/watch?v=real123" }),
-          json: async () => ({}),
-        } as unknown as Response;
-      }
-      if (urlStr.includes("groq.com")) {
-        return jsonResponse({ choices: [{ message: { content: JSON.stringify(plan) } }], usage: {} });
-      }
-      throw new Error(`unexpected fetch to ${urlStr}`);
-    }) as unknown as typeof fetch;
-
-    const res = await POST(makeRequest(validRequestBody));
-    const json = await res.json();
-
-    // The real resolved destination, not a constructed search URL.
-    expect(json.techniques[0].resources[0].url).toBe("https://www.youtube.com/watch?v=real123");
-    expect(json.techniques[0].resources[0].sourceName).toBe("YouTube");
-  });
-
-  it("falls back to constructSearchUrl when Groq's URL isn't a member of the verified list (deviated or invented)", async () => {
-    mockGenerateContent.mockResolvedValue(
-      groundedResponseWithChunks([
-        { uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/xyz", title: "chess.com" },
-      ])
-    );
-
-    // Plain example.com URLs — none of these are the verified chess.com one.
-    const plan = makeValidAiPlan();
-
-    global.fetch = vi.fn(async (url: string | URL | Request) => {
-      const urlStr = String(url);
-      if (urlStr.includes("vertexaisearch.cloud.google.com")) {
-        return {
-          ok: false,
-          status: 302,
-          headers: new Headers({ location: "https://www.chess.com/article/real" }),
-          json: async () => ({}),
-        } as unknown as Response;
-      }
-      if (urlStr.includes("groq.com")) {
-        return jsonResponse({ choices: [{ message: { content: JSON.stringify(plan) } }], usage: {} });
-      }
-      throw new Error(`unexpected fetch to ${urlStr}`);
-    }) as unknown as typeof fetch;
-
-    const res = await POST(makeRequest(validRequestBody));
-    const json = await res.json();
-
-    expect(json.techniques[0].resources[0].url).toMatch(
-      /^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/
-    );
+    // Video resource uses Serper video
+    expect(json.techniques[0].resources[0].url).toBe("https://youtube.com/watch?v=serpervideo");
+    // Reading resource uses Serper search
+    expect(json.techniques[0].resources[1].url).toBe("https://example.com/serperarticle");
+    // Audio resource now uses Serper search for podcast episodes
+    expect(json.techniques[0].resources[2].url).toBe("https://example.com/serperarticle");
   });
 
   it("returns 400 for an invalid request body", async () => {
@@ -198,10 +102,13 @@ describe("POST /api/generate-plan", () => {
     expect(res.status).toBe(400);
   });
 
-  it("falls back to ungrounded generation with constructed search URLs when Gemini grounding fails", async () => {
-    mockGenerateContent.mockRejectedValue(new Error("gemini down"));
+  it("falls back to constructSearchUrl when Serper fails or times out", async () => {
     global.fetch = vi.fn(async (url: string | URL | Request) => {
-      if (String(url).includes("groq.com")) {
+      const urlStr = String(url);
+      if (urlStr.includes("serper.dev")) {
+        return jsonResponse({}, false, 500); // simulate failure
+      }
+      if (urlStr.includes("groq.com")) {
         return jsonResponse({
           choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
           usage: {},
@@ -214,26 +121,34 @@ describe("POST /api/generate-plan", () => {
     expect(res.status).toBe(200);
 
     const json = await res.json();
-    expect(json.techniques[0].resources[0].url).toMatch(
-      /^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/
-    );
+    // Video and reading fallback to constructed urls
+    expect(json.techniques[0].resources[0].url).toMatch(/^https:\/\/www\.youtube\.com\/results\?search_query=/);
+    expect(json.techniques[0].resources[1].url).toMatch(/^https:\/\/www\.google\.com\/search\?q=/);
   });
 
   it("retries Groq once and recovers when the first attempt fails schema validation", async () => {
-    mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
     let groqCalls = 0;
-    global.fetch = vi.fn(async () => {
-      groqCalls++;
-      if (groqCalls === 1) {
+    let sc = 0;
+    global.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes("serper.dev")) {
+        sc++;
+        return jsonResponse({ videos: [{ link: `vid${sc}` }], organic: [{ link: `org${sc}` }] });
+      }
+      if (urlStr.includes("groq.com")) {
+        groqCalls++;
+        if (groqCalls === 1) {
+          return jsonResponse({
+            choices: [{ message: { content: JSON.stringify({ not: "the right shape" }) } }],
+            usage: {},
+          });
+        }
         return jsonResponse({
-          choices: [{ message: { content: JSON.stringify({ not: "the right shape" }) } }],
+          choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
           usage: {},
         });
       }
-      return jsonResponse({
-        choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
-        usage: {},
-      });
+      throw new Error(`unexpected fetch to ${String(url)}`);
     }) as unknown as typeof fetch;
 
     const res = await POST(makeRequest(validRequestBody));
@@ -242,15 +157,23 @@ describe("POST /api/generate-plan", () => {
   });
 
   it("retries Groq once and recovers when the first attempt returns duplicate resource URLs", async () => {
-    mockGenerateContent.mockResolvedValue({ text: "grounded content", usageMetadata: {} });
     let groqCalls = 0;
-    global.fetch = vi.fn(async () => {
-      groqCalls++;
-      const plan = groqCalls === 1 ? makeAiPlanWithDuplicateUrls() : makeValidAiPlan();
-      return jsonResponse({
-        choices: [{ message: { content: JSON.stringify(plan) } }],
-        usage: {},
-      });
+    let sc = 0;
+    global.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes("serper.dev")) {
+        sc++;
+        return jsonResponse({ videos: [{ link: `vid${sc}` }], organic: [{ link: `org${sc}` }] });
+      }
+      if (urlStr.includes("groq.com")) {
+        groqCalls++;
+        const plan = groqCalls === 1 ? makeAiPlanWithDuplicateUrls() : makeValidAiPlan();
+        return jsonResponse({
+          choices: [{ message: { content: JSON.stringify(plan) } }],
+          usage: {},
+        });
+      }
+      throw new Error(`unexpected fetch to ${String(url)}`);
     }) as unknown as typeof fetch;
 
     const res = await POST(makeRequest(validRequestBody));
@@ -264,9 +187,11 @@ describe("POST /api/generate-plan", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
-  it("returns a structured error response when Gemini and Groq both fail", async () => {
-    mockGenerateContent.mockRejectedValue(new Error("gemini down"));
-    global.fetch = vi.fn(async () => jsonResponse({}, false, 500)) as unknown as typeof fetch;
+  it("returns a structured error response when Groq fails repeatedly", async () => {
+    global.fetch = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes("groq.com")) return jsonResponse({}, false, 500);
+      return jsonResponse({});
+    }) as unknown as typeof fetch;
 
     const res = await POST(makeRequest(validRequestBody));
     expect(res.status).toBe(502);

@@ -16,16 +16,38 @@ function devLog(label: string, usage: unknown) {
   }
 }
 
+// Maps the free-text-but-closed-set timeCommitment answer (see
+// TimeCommitmentScreen.tsx's preset options) to an exact technique count,
+// instead of leaving the 5-8 range up to the model's own judgment — a
+// 15-min/day learner and a weekends-only learner shouldn't get roadmaps
+// that could come out the same length by chance. Bounded by the same
+// MIN_TECHNIQUES/MAX_TECHNIQUES the rest of the pipeline already enforces.
+const TECHNIQUE_COUNT_BY_TIME_COMMITMENT: Record<string, number> = {
+  "15 mins a day": MIN_TECHNIQUES,
+  "30 mins a day": 6,
+  "A few hours a week": 7,
+  "Weekends only": MAX_TECHNIQUES,
+};
+const DEFAULT_TECHNIQUE_COUNT = 6;
+
+export function getTargetTechniqueCount(timeCommitment: string): number {
+  return TECHNIQUE_COUNT_BY_TIME_COMMITMENT[timeCommitment] ?? DEFAULT_TECHNIQUE_COUNT;
+}
+
 // Mirrors AIPlanResponseSchema — hand-written to avoid an extra
 // zod-to-json-schema dependency for what is a small, stable shape.
-const AI_PLAN_JSON_SCHEMA = {
+// minItems/maxItems are both set to the exact per-request target count
+// (not the outer MIN/MAX_TECHNIQUES range) so the JSON-schema constraint
+// itself pushes toward that exact number, not just the prompt text.
+function buildPlanJsonSchema(targetCount: number) {
+  return {
   type: "object",
   properties: {
     summary: { type: "string" },
     techniques: {
       type: "array",
-      minItems: MIN_TECHNIQUES,
-      maxItems: MAX_TECHNIQUES,
+      minItems: targetCount,
+      maxItems: targetCount,
       items: {
         type: "object",
         properties: {
@@ -56,7 +78,8 @@ const AI_PLAN_JSON_SCHEMA = {
   },
   required: ["summary", "techniques"],
   additionalProperties: false,
-} as const;
+  } as const;
+}
 
 const RATIONALE_LENGTH_RULE =
   `Keep each technique's "rationale" short and punchy — one sentence, maximum 15 words, no matter how long the source material is.`;
@@ -102,10 +125,10 @@ const SKILL_LEVEL_RULES: Record<SkillLevel, string> = {
     `mastery-oriented techniques a comfortable practitioner would still need to refine.`,
 };
 
-function buildSkeletonPrompt(input: GeneratePlanRequest): string {
+function buildSkeletonPrompt(input: GeneratePlanRequest, targetCount: number): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
+    `Create a learning plan with exactly ${targetCount} techniques for this hobby — not a range, exactly ${targetCount}. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `${SKILL_LEVEL_RULES[input.level]} Tailor the plan to the stated goal and what they already know. ` +
     `For each technique's resources, write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
     `Write a one-line reason each resource fits this user. For the "url" field, write exactly "https://placeholder.com" — it will be filled in automatically later. ` +
@@ -117,7 +140,8 @@ async function callChatJsonSchema(
   endpoint: string,
   apiKey: string,
   model: string,
-  userContent: string
+  userContent: string,
+  targetCount: number
 ): Promise<unknown> {
   const res = await fetch(endpoint, {
     method: "POST",
@@ -133,7 +157,7 @@ async function callChatJsonSchema(
       ],
       response_format: {
         type: "json_schema",
-        json_schema: { name: "hobby_plan", strict: true, schema: AI_PLAN_JSON_SCHEMA },
+        json_schema: { name: "hobby_plan", strict: true, schema: buildPlanJsonSchema(targetCount) },
       },
     }),
   });
@@ -151,10 +175,10 @@ async function callChatJsonSchema(
   return JSON.parse(content);
 }
 
-async function callGroq(userContent: string): Promise<unknown> {
+async function callGroq(userContent: string, targetCount: number): Promise<unknown> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
-  return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent);
+  return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent, targetCount);
 }
 
 // Invents the full plan skeleton — technique names, descriptions, rationale,
@@ -163,12 +187,20 @@ async function callGroq(userContent: string): Promise<unknown> {
 // search-service's enrichPlanWithSerper. Retries once on schema-validation
 // failure before being treated as a failure (transient malformed JSON is
 // common enough with any LLM to be worth one retry before giving up).
+//
+// Zod validation below still accepts the outer MIN_TECHNIQUES-MAX_TECHNIQUES
+// range rather than requiring exactly targetCount — deliberately: the
+// prompt text and the JSON schema's minItems/maxItems both push the model
+// toward the exact count, but LLMs aren't perfectly reliable at hard count
+// constraints, and rejecting a near-miss (e.g. 5 techniques when 6 were
+// asked for) would trade a real robustness cost for a validation nicety.
 export async function structureWithFallback(input: GeneratePlanRequest): Promise<AIPlanResponse> {
-  const userContent = buildSkeletonPrompt(input);
+  const targetCount = getTargetTechniqueCount(input.timeCommitment);
+  const userContent = buildSkeletonPrompt(input, targetCount);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await callGroq(userContent);
+      const raw = await callGroq(userContent, targetCount);
       const parsed = AIPlanResponseSchema.safeParse(raw);
       // No duplicate-URL check here anymore — at this stage every resource's
       // url is uniformly the "https://placeholder.com" literal (see

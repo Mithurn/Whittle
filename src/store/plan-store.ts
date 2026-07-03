@@ -2,6 +2,37 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { HobbyPlan, Technique, TechniqueStatus } from "@/types/domain";
 
+// v0 -> v1: Technique.notes changed from a plain string to a structured
+// NoteEntry[] (see decisions.md #16). Any plan already sitting in a
+// browser's localStorage from before this change still has the old shape
+// — without this migration, technique.notes reads as a string/undefined
+// instead of an array, and the first `.find`/`.filter` call on it throws
+// at runtime (caught live: "notes.find is not a function"). A non-empty
+// old note is preserved as a single entry rather than silently discarded.
+// Exported directly so this can be unit-tested without needing to drive
+// Zustand's actual localStorage-rehydration timing in a test.
+export function migratePlanState(persistedState: unknown): { currentPlan: HobbyPlan | null } {
+  const state = persistedState as { currentPlan: HobbyPlan | null } | undefined;
+  if (!state?.currentPlan) return state ?? { currentPlan: null };
+  return {
+    ...state,
+    currentPlan: {
+      ...state.currentPlan,
+      techniques: state.currentPlan.techniques.map((technique) => {
+        const rawNotes = (technique as unknown as { notes?: unknown }).notes;
+        if (Array.isArray(rawNotes)) return technique;
+        const oldText = typeof rawNotes === "string" ? rawNotes.trim() : "";
+        return {
+          ...technique,
+          notes: oldText
+            ? [{ id: crypto.randomUUID(), title: "Note", description: oldText, createdAt: new Date().toISOString() }]
+            : [],
+        };
+      }),
+    },
+  };
+}
+
 interface PlanState {
   currentPlan: HobbyPlan | null;
   // Transient, session-only signal that a technique was just marked
@@ -83,6 +114,8 @@ export const usePlanStore = create<PlanState>()(
       name: "hobby-plan-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ currentPlan: state.currentPlan }),
+      version: 1,
+      migrate: migratePlanState,
     }
   )
 );

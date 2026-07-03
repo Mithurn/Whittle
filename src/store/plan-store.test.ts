@@ -5,6 +5,7 @@ import {
   getVisibleTechniques,
   getSkippedTechniques,
   getRoadmapZones,
+  migratePlanState,
 } from "./plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";
 
@@ -116,6 +117,42 @@ describe("plan-store", () => {
     usePlanStore.getState().setPlan(makePlan([makeTechnique({ id: "t1", order: 0 })]));
     usePlanStore.getState().startOver();
     expect(usePlanStore.getState().currentPlan).toBeNull();
+  });
+
+  describe("migratePlanState (v0 -> v1: notes string -> NoteEntry[])", () => {
+    it("wraps an old non-empty string note into a single structured entry", () => {
+      const oldPlan = makePlan([makeTechnique({ id: "t1", order: 0 })]);
+      const oldTechnique = { ...oldPlan.techniques[0], notes: "felt good today" } as unknown as Technique;
+      const migrated = migratePlanState({ currentPlan: { ...oldPlan, techniques: [oldTechnique] } });
+
+      const notes = migrated.currentPlan?.techniques[0].notes;
+      expect(notes).toHaveLength(1);
+      expect(notes?.[0].description).toBe("felt good today");
+      expect(notes?.[0].id).toBeTruthy();
+    });
+
+    it("converts a missing/empty old notes field into an empty array, not a crash", () => {
+      const oldPlan = makePlan([makeTechnique({ id: "t1", order: 0 })]);
+      const oldTechnique = { ...oldPlan.techniques[0] } as unknown as Technique;
+      delete (oldTechnique as unknown as { notes?: unknown }).notes;
+      const migrated = migratePlanState({ currentPlan: { ...oldPlan, techniques: [oldTechnique] } });
+
+      expect(migrated.currentPlan?.techniques[0].notes).toEqual([]);
+    });
+
+    it("leaves an already-migrated (array) notes field untouched", () => {
+      const plan = makePlan([makeTechnique({ id: "t1", order: 0 })]);
+      plan.techniques[0].notes = [
+        { id: "n1", title: "Existing", description: "d", createdAt: "2026-01-01T00:00:00.000Z" },
+      ];
+      const migrated = migratePlanState({ currentPlan: plan });
+      expect(migrated.currentPlan?.techniques[0].notes).toEqual(plan.techniques[0].notes);
+    });
+
+    it("handles no persisted plan at all without throwing", () => {
+      expect(migratePlanState(undefined)).toEqual({ currentPlan: null });
+      expect(migratePlanState({ currentPlan: null })).toEqual({ currentPlan: null });
+    });
   });
 
   describe("getProgress", () => {

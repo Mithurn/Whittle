@@ -79,7 +79,7 @@ export function getSkippedTechniques(plan: HobbyPlan): Technique[] {
     .sort((a, b) => a.order - b.order);
 }
 
-// --- Roadmap-specific derived state (see decisions.md #11) ---
+// --- Roadmap-specific derived state ---
 
 export type RoadmapNodeState = "completed" | "current" | "available" | "skipped";
 
@@ -97,8 +97,8 @@ export interface RoadmapZone {
 const ZONE_NAMES = ["Foundation Grove", "Application Forest", "Mastery Peak"];
 
 // Visual-only grouping over the full ordered technique list — no schema
-// change, the AI never sees or invents a zone/module field (decisions.md
-// #11). Skipped techniques stay in the path here (unlike getVisibleTechniques,
+// change, the AI never sees or invents a zone/module field. Skipped
+// techniques stay in the path here (unlike getVisibleTechniques,
 // which excludes them) because skipped/available are sibling-level states,
 // not a hidden list.
 export function getRoadmapZones(plan: HobbyPlan): RoadmapZone[] {
@@ -123,8 +123,8 @@ export function getRoadmapZones(plan: HobbyPlan): RoadmapZone[] {
   return zones;
 }
 
-// No "locked" state — every technique is always accessible (decisions.md
-// #11). "current" is guidance only: the first not-yet-resolved technique in
+// No "locked" state — every technique is always accessible. "current" is
+// guidance only: the first not-yet-resolved technique in
 // order. Every other unresolved technique is "available", never gated.
 function deriveRoadmapNodes(orderedTechniques: Technique[]): RoadmapNode[] {
   let currentAssigned = false;
@@ -154,7 +154,7 @@ function splitIntoZoneSizes(total: number, zoneCount: number): number[] {
 }
 
 // Mirrors getProgress's convention: skipped techniques are excluded from
-// the denominator (opted-out, not "not done yet") — see decisions.md #3.
+// the denominator (opted-out, not "not done yet").
 function computeZoneProgress(nodes: RoadmapNode[]): { completed: number; total: number } {
   const completed = nodes.filter((node) => node.state === "completed").length;
   const skipped = nodes.filter((node) => node.state === "skipped").length;

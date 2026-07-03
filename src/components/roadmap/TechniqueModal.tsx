@@ -22,7 +22,7 @@ const RESOURCE_ICONS: Record<ResourceType, LucideIcon> = {
 };
 
 // Overlay is the final technique-detail surface — no separate /technique/[id]
-// page (resolves decisions.md #12). Replaces TechniqueStub.tsx.
+// page. Replaces the earlier stub version of this component.
 export function TechniqueModal({ technique, isMobile, onClose, onMastered }: TechniqueModalProps) {
   const updateTechniqueStatus = usePlanStore((s) => s.updateTechniqueStatus);
   const open = technique !== null;

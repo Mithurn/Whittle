@@ -17,8 +17,8 @@ interface CampfireNodeProps {
 // the task spec ("skipped" only differs on hover, not on tap).
 const TAP_TRANSITION = { type: "spring", stiffness: 420, damping: 18 } as const;
 
-// Copy stays in the domain's mastered/skipped vocabulary (copy-guidelines.md)
-// and never frames skipped as a dead end — it's still "tap to revisit".
+// Copy stays in the domain's mastered/skipped vocabulary and never frames
+// skipped as a dead end — it's still "tap to revisit".
 function ariaLabel(state: RoadmapNodeData["state"], name: string): string {
   switch (state) {
     case "current":

@@ -16,7 +16,7 @@ export default function Home() {
   const isMobile = useIsMobile();
   const [selectedTechniqueId, setSelectedTechniqueId] = useState<string | null>(null);
   // One-shot mastered-celebration beat on the rail mascot — see
-  // MascotCompanion.tsx's `celebrating` prop and motion-system.md.
+  // MascotCompanion.tsx's `celebrating` prop.
   const [celebrating, setCelebrating] = useState(false);
 
   // Zustand persist hydration: avoid flash of wrong UI on first render
@@ -41,8 +41,8 @@ export default function Home() {
       <div className="relative min-h-dvh w-full overflow-hidden bg-background">
         <RoadmapBackground isMobile={isMobile} />
 
-        {/* No app nav sidebar — this is a single-plan app, per
-            component-architecture.md. Desktop: the guide rail is taken out
+        {/* No app nav sidebar — this is a single-plan app with no screen
+            hierarchy to navigate between. Desktop: the guide rail is taken out
             of flow (fixed, pinned left) so its width can never shift the
             roadmap off-center — the roadmap centers on the full viewport,
             independent of it. Mobile: mascot stays in normal flow, compact,

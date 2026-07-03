@@ -10,9 +10,8 @@ interface SkippedTechniquesListProps {
 }
 
 // Skipped techniques already stay visible in the roadmap path itself
-// (dimmed, per decisions.md #11) — this is the separate, secondary view
-// component-architecture.md calls for: a place to actually review and
-// reverse a skip, not just see that it happened. Collapsed by default
+// (dimmed) — this is a separate, secondary view: a place to actually
+// review and reverse a skip, not just see that it happened. Collapsed by default
 // behind a compact "N skipped" toggle — this renders in the fixed-position
 // desktop rail (see MascotCompanion.tsx) as well as on mobile, and a
 // fixed-position container can't scroll to reach content that overflows it,
@@ -46,8 +45,8 @@ export function SkippedTechniquesList({ plan }: SkippedTechniquesListProps) {
               className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-3 py-2.5"
             >
               <span className="min-w-0 truncate font-sans text-sm text-text-primary">{technique.name}</span>
-              {/* "Bring back" — copy-guidelines.md: skipping is reversible,
-                  never framed as a dead end. Goes back to not_started, not a
+              {/* "Bring back" — skipping is reversible, never framed as a
+                  dead end. Goes back to not_started, not a
                   remembered in-progress state — there's nothing else to
                   restore it to. */}
               <button

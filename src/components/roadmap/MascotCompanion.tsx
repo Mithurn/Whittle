@@ -11,8 +11,8 @@ interface MascotCompanionProps {
   plan: HobbyPlan;
   /** True while the technique modal (modal/bottom sheet) is open. */
   isTechniqueOpen: boolean;
-  /** True for the one scoped mastered-celebration beat (motion-system.md):
-   * forces the "success" state, plays its Lottie once instead of looping,
+  /** True for the one scoped mastered-celebration beat: forces the
+   * "success" state, plays its Lottie once instead of looping,
    * and clears itself via onCelebrationEnd when that single playback ends. */
   celebrating?: boolean;
   onCelebrationEnd?: () => void;
@@ -26,9 +26,10 @@ const MESSAGES_IN_PROGRESS = [
 ];
 const MESSAGE_NOT_STARTED = "Ready to light the first fire?";
 const MESSAGE_ALL_MASTERED = "The whole trail is glowing — you did it.";
-// Matches copy-guidelines.md's locked wording for this exact empty state.
+// Locked wording for this exact empty state — 0% here means opted out of
+// everything, not "hasn't started yet".
 const MESSAGE_ALL_SKIPPED = "You've skipped everything in this plan — want to start fresh?";
-// Matches copy-guidelines.md's exact "Good" example for a mastered moment.
+// Short and specific to the moment, not generic praise.
 const MESSAGE_CELEBRATING = "Nice — that's one more in the bag.";
 
 function pickMessage(progress: ReturnType<typeof getProgress>): string {
@@ -36,7 +37,7 @@ function pickMessage(progress: ReturnType<typeof getProgress>): string {
   if (progress.percentage === 100) return MESSAGE_ALL_MASTERED;
   if (progress.mastered === 0) return MESSAGE_NOT_STARTED;
   // Rotates off real mastered count, not a timer — changes only when
-  // progress actually changes (decisions.md #11: no ambient motion).
+  // progress actually changes, never on an ambient loop.
   return MESSAGES_IN_PROGRESS[progress.mastered % MESSAGES_IN_PROGRESS.length];
 }
 
@@ -59,8 +60,8 @@ function pickMascotState(
   return "idle";
 }
 
-// Uses the shared MascotWithSpeech/SpeechBubble system (see decisions.md)
-// rather than hand-rolled bubble markup. MascotWithSpeech only takes one
+// Uses the shared MascotWithSpeech/SpeechBubble system rather than
+// hand-rolled bubble markup. MascotWithSpeech only takes one
 // pixel size, not a responsive pair, so mobile/desktop still render as two
 // separate instances here — sm here (mobile: compact bar, first roadmap
 // node must stay visible without scrolling) vs lg there (desktop: the

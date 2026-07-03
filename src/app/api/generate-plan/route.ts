@@ -97,8 +97,8 @@ function buildSkeletonPrompt(input: GeneratePlanRequest): string {
 }
 
 // Minimal shape of what we actually read from Serper's raw response — typed
-// properly instead of `any` (CLAUDE.md rule 9: no `any` without stopping to
-// ask first; the fields used here are simple and stable enough not to need one).
+// properly instead of `any`; the fields used here are simple and stable
+// enough not to need one.
 interface SerperRawItem {
   link: string;
   title: string;

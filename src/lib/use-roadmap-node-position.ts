@@ -1,5 +1,4 @@
-// Single source of truth for the roadmap's zig-zag positioning math — see
-// component-architecture.md's Hooks section and decisions.md #11. A
+// Single source of truth for the roadmap's zig-zag positioning math. A
 // triangle wave cycled by node index, not CSS nth-child tricks or SVG path
 // math — adapted from the fixed-offset-array technique studied in the
 // duolingo-clone reference repo (structural idea only, not its code).

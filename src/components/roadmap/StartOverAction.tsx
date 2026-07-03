@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { usePlanStore } from "@/store/plan-store";
 
-// Destructive — a plain inline confirm swapped in place, never an overlay
-// (component-architecture.md's StartOverAction spec). Copy matches
-// copy-guidelines.md's locked wording exactly. This is the only way back to
+// Destructive — a plain inline confirm swapped in place, never an overlay.
+// Copy matches the locked wording exactly. This is the only way back to
 // onboarding — there's no plan history/list to navigate instead. No width/
 // alignment assumptions here — callers position this differently on mobile
 // (centered, full-width) vs. the desktop rail (left-aligned, compact).

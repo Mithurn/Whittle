@@ -67,7 +67,7 @@ describe("MascotCompanion", () => {
     expect(screen.getAllByText("The whole trail is glowing — you did it.").length).toBeGreaterThan(0);
   });
 
-  it("shows the all-skipped message, matching copy-guidelines.md's locked wording", () => {
+  it("shows the all-skipped message, matching the locked wording for this empty state", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0, status: "skipped" })]);
     render(<MascotCompanion plan={plan} isTechniqueOpen={false} />);
     expect(

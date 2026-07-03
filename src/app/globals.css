@@ -80,7 +80,7 @@
 
 /* ── Light — "Daylight Campfire" (default theme) ──
    Bespoke warm hexes, verified via a WCAG contrast script (not eyeballed,
-   not Tailwind's default zinc/stone scale — see decisions.md). Mascot/CTA
+   not Tailwind's default zinc/stone scale). Mascot/CTA
    brand colors are unchanged from dark mode on purpose: they're the one
    constant that ties both themes to the same character. */
 :root {
@@ -120,7 +120,7 @@
   --input: #F5EDE4;
   --ring: #EB8928;
 
-  /* ── Outline (warm neutral — "wood/stone" node family, from design.md) ── */
+  /* ── Outline (warm neutral — "wood/stone" node family) ── */
   --outline: #a78b7d;
   --outline-variant: #584236;
 
@@ -186,7 +186,7 @@
   --input: #1B2130;
   --ring: #EB8928;
 
-  /* ── Outline (warm neutral — "wood/stone" node family, from design.md) ── */
+  /* ── Outline (warm neutral — "wood/stone" node family) ── */
   --outline: #a78b7d;
   --outline-variant: #584236;
 

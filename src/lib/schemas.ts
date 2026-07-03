@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Hard input length caps (CLAUDE.md rule 8: explicit, not implicit).
+// Hard input length caps — explicit named constants, not implicit limits.
 export const HOBBY_NAME_MAX = 60;
 export const GOAL_MAX = 300;
 export const TIME_COMMITMENT_MAX = 100;

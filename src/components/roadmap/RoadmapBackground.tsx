@@ -10,8 +10,7 @@ interface RoadmapBackgroundProps {
 }
 
 // Slow, barely-perceptible drift — this is the one named ambient-loop
-// exception in the whole app (decisions.md #11, motion-system.md). Every
-// other layer here is static.
+// exception in the whole app. Every other layer here is static.
 const TREE_PLAYBACK_SPEED = 0.35;
 
 // Environmental depth, not decoration — three static layers (gradient, fog,

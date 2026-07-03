@@ -25,8 +25,8 @@ const TREATMENT_STYLES: Record<ConnectorTreatment, { stroke: string; opacity: nu
 };
 
 // Skipped is deliberately in the same visual family as available — no
-// punishment styling (decisions.md #11: "skipped should not feel like
-// failure"). completed+available (technique finished, next not started
+// punishment styling, since skipping isn't meant to feel like failure.
+// completed+available (technique finished, next not started
 // yet) isn't called out explicitly in the spec; it falls into "bright"
 // alongside current+available since a completed endpoint still earns more
 // warmth than a fully neutral segment, without competing with the

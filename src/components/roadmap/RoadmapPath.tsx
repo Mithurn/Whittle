@@ -24,7 +24,7 @@ interface FlatEntry {
 }
 
 // The path is one continuous journey from first node to last — zones are a
-// visual-only grouping (decisions.md #11), not a break in the trail. The
+// visual-only grouping, not a break in the trail. The
 // zig-zag position resets per zone (positionIndex, not a running global
 // index) so every zone opens centered directly under its header, matching
 // the reference layout — the connector between the last node of one zone

@@ -48,8 +48,8 @@ const SIZE_PX: Record<MascotWithSpeechSize, number> = {
 
 // The one mascot + speech-bubble system, used everywhere the app pairs the
 // two — onboarding question screens, the roadmap companion, and hero
-// moments like the generation-error screen. See decisions.md for why the
-// per-screen bespoke versions were consolidated into this.
+// moments like the generation-error screen — consolidating what used to be
+// separate, bespoke per-screen versions.
 //
 // Every position is a real flex row now — mascot first, bubble second, no
 // absolute/float anchoring anywhere. Absolute anchors were computed against

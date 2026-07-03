@@ -12,8 +12,9 @@ import { GeneratePlanRequest } from "@/lib/schemas";
 import { usePlanStore } from "@/store/plan-store";
 import type { HobbyPlan } from "@/types/domain";
 
-// Real grounded generation measured at 15-25s (see /docs/decisions.md) —
-// this guards against a genuinely hung request, not the expected wait.
+// Typically well under 10s in practice with the current Groq + Serper
+// pipeline — this timeout is a generous ceiling against a genuinely hung
+// request, not the expected wait.
 const GENERATION_TIMEOUT_MS = 45_000;
 
 type Status = "idle" | "submitting" | "error";

@@ -10,7 +10,7 @@ export interface ProgressBarProps extends AriaProgressBarProps {
 
 // CSSProperties has no index signature for custom properties — this is a
 // precise, narrow type for the one custom property .fill actually reads,
-// not `any` (CLAUDE.md rule 9).
+// not `any`.
 type FillStyle = CSSProperties & { "--percent": string };
 
 // Premium glossy 3D progress bar. `label` carries the real "X/Y mastered"

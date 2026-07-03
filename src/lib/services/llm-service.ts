@@ -5,6 +5,7 @@ import {
   type GeneratePlanRequest,
   type AIPlanResponse,
 } from "@/lib/schemas";
+import type { SkillLevel } from "@/types/domain";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -82,11 +83,30 @@ const RESOURCE_MIX_RULE =
   `(either audio or another reading/article, whichever fits the technique better) — never audio-only for a ` +
   `technique that requires seeing physical form.`;
 
+// A generic "tailor to the stated skill level" instruction was tried first
+// and reproducibly failed — verified live: an "intermediate" chess request
+// still came back with "Opening Principles" and "Basic Tactical Motifs" as
+// the first two techniques, both textbook beginner content. Each level now
+// gets an explicit exclusion rule instead of a vague tailoring request.
+const SKILL_LEVEL_RULES: Record<SkillLevel, string> = {
+  beginner:
+    `The user is a complete beginner with this hobby — assume zero prior exposure. Start from the most ` +
+    `foundational technique (core rules, basic setup/equipment, essential vocabulary) and build up from there.`,
+  intermediate:
+    `The user already knows the basics — do NOT include any technique a first-time beginner would need ` +
+    `(basic rules, how to set up or hold equipment, core terminology, "getting started" content). Every ` +
+    `technique must assume that foundation is already solid and build past it.`,
+  advanced:
+    `The user is already comfortable with most of this hobby, including intermediate-level skills — do NOT ` +
+    `include any beginner or general-intermediate technique. Focus exclusively on nuanced, high-level, or ` +
+    `mastery-oriented techniques a comfortable practitioner would still need to refine.`,
+};
+
 function buildSkeletonPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
     `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
-    `Tailor the plan to the stated skill level, goal, and what they already know. ` +
+    `${SKILL_LEVEL_RULES[input.level]} Tailor the plan to the stated goal and what they already know. ` +
     `For each technique's resources, write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
     `Write a one-line reason each resource fits this user. For the "url" field, write exactly "https://placeholder.com" — it will be filled in automatically later. ` +
     `Also include a one-line summary tying the plan to their goal.`

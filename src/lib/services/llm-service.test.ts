@@ -59,6 +59,57 @@ describe("structureWithFallback", () => {
     expect(userMessage).toContain("castling");
   });
 
+  it("tells the model to exclude beginner content for an intermediate user", async () => {
+    process.env.GROQ_API_KEY = "test-key";
+    let sentBody: { messages: { role: string; content: string }[] } | undefined;
+    global.fetch = vi.fn(async (_url, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
+        usage: {},
+      });
+    }) as unknown as typeof fetch;
+
+    await structureWithFallback({ ...request, level: "intermediate" });
+
+    const userMessage = sentBody?.messages.find((m) => m.role === "user")?.content ?? "";
+    expect(userMessage).toMatch(/do NOT include any technique a first-time beginner would need/i);
+  });
+
+  it("tells the model to exclude beginner and intermediate content for an advanced user", async () => {
+    process.env.GROQ_API_KEY = "test-key";
+    let sentBody: { messages: { role: string; content: string }[] } | undefined;
+    global.fetch = vi.fn(async (_url, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
+        usage: {},
+      });
+    }) as unknown as typeof fetch;
+
+    await structureWithFallback({ ...request, level: "advanced" });
+
+    const userMessage = sentBody?.messages.find((m) => m.role === "user")?.content ?? "";
+    expect(userMessage).toMatch(/do NOT include any beginner or general-intermediate technique/i);
+  });
+
+  it("tells the model to start from fundamentals for a beginner user", async () => {
+    process.env.GROQ_API_KEY = "test-key";
+    let sentBody: { messages: { role: string; content: string }[] } | undefined;
+    global.fetch = vi.fn(async (_url, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
+        usage: {},
+      });
+    }) as unknown as typeof fetch;
+
+    await structureWithFallback({ ...request, level: "beginner" });
+
+    const userMessage = sentBody?.messages.find((m) => m.role === "user")?.content ?? "";
+    expect(userMessage).toMatch(/assume zero prior exposure/i);
+  });
+
   it("retries once and recovers when the first attempt fails schema validation", async () => {
     process.env.GROQ_API_KEY = "test-key";
     let calls = 0;

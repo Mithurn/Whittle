@@ -15,6 +15,7 @@ function makeTechnique(overrides: Partial<Technique> & Pick<Technique, "id" | "o
     rationale: "rationale",
     resources: [],
     status: "not_started",
+    notes: [],
     ...overrides,
   };
 }
@@ -63,17 +64,52 @@ describe("plan-store", () => {
     expect(usePlanStore.getState().currentPlan).toBeNull();
   });
 
-  it("updateTechniqueNotes updates only the targeted technique's notes", () => {
+  it("addTechniqueNote appends a note only to the targeted technique", () => {
     const plan = makePlan([
       makeTechnique({ id: "t1", order: 0 }),
       makeTechnique({ id: "t2", order: 1 }),
     ]);
     usePlanStore.getState().setPlan(plan);
-    usePlanStore.getState().updateTechniqueNotes("t1", "felt good today");
+    usePlanStore.getState().addTechniqueNote("t1", { title: "Key idea", description: "felt good today" });
 
     const techniques = usePlanStore.getState().currentPlan?.techniques;
-    expect(techniques?.find((t) => t.id === "t1")?.notes).toBe("felt good today");
-    expect(techniques?.find((t) => t.id === "t2")?.notes).toBeUndefined();
+    const t1Notes = techniques?.find((t) => t.id === "t1")?.notes;
+    expect(t1Notes).toHaveLength(1);
+    expect(t1Notes?.[0]).toMatchObject({ title: "Key idea", description: "felt good today" });
+    expect(t1Notes?.[0].id).toBeTruthy();
+    expect(t1Notes?.[0].createdAt).toBeTruthy();
+    expect(techniques?.find((t) => t.id === "t2")?.notes).toEqual([]);
+  });
+
+  it("addTechniqueNote appends rather than replacing existing notes", () => {
+    const plan = makePlan([makeTechnique({ id: "t1", order: 0 })]);
+    usePlanStore.getState().setPlan(plan);
+    usePlanStore.getState().addTechniqueNote("t1", { title: "First", description: "a" });
+    usePlanStore.getState().addTechniqueNote("t1", { title: "Second", description: "b" });
+
+    const notes = usePlanStore.getState().currentPlan?.techniques[0].notes;
+    expect(notes?.map((n) => n.title)).toEqual(["First", "Second"]);
+  });
+
+  it("removeTechniqueNote removes only the targeted note", () => {
+    const plan = makePlan([makeTechnique({ id: "t1", order: 0 })]);
+    usePlanStore.getState().setPlan(plan);
+    usePlanStore.getState().addTechniqueNote("t1", { title: "First", description: "a" });
+    usePlanStore.getState().addTechniqueNote("t1", { title: "Second", description: "b" });
+    const noteId = usePlanStore.getState().currentPlan?.techniques[0].notes[0].id;
+
+    usePlanStore.getState().removeTechniqueNote("t1", noteId!);
+
+    const notes = usePlanStore.getState().currentPlan?.techniques[0].notes;
+    expect(notes?.map((n) => n.title)).toEqual(["Second"]);
+  });
+
+  it("triggerCelebration/clearCelebration set and clear the transient celebration flag", () => {
+    expect(usePlanStore.getState().celebratingTechniqueId).toBeNull();
+    usePlanStore.getState().triggerCelebration("t1");
+    expect(usePlanStore.getState().celebratingTechniqueId).toBe("t1");
+    usePlanStore.getState().clearCelebration();
+    expect(usePlanStore.getState().celebratingTechniqueId).toBeNull();
   });
 
   it("startOver discards the current plan", () => {

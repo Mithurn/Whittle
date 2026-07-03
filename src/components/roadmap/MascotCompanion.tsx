@@ -9,8 +9,6 @@ import type { HobbyPlan } from "@/types/domain";
 
 interface MascotCompanionProps {
   plan: HobbyPlan;
-  /** True while the technique modal (modal/bottom sheet) is open. */
-  isTechniqueOpen: boolean;
   /** True for the one scoped mastered-celebration beat: forces the
    * "success" state, plays its Lottie once instead of looping,
    * and clears itself via onCelebrationEnd when that single playback ends. */
@@ -41,21 +39,12 @@ function pickMessage(progress: ReturnType<typeof getProgress>): string {
   return MESSAGES_IN_PROGRESS[progress.mastered % MESSAGES_IN_PROGRESS.length];
 }
 
-// idle = default/current, explaining = a node is open (the mascot reading
-// out that technique's rationale — a purpose-built animation, not the
-// generic "thinking" wait state GenerationLoadingScreen.tsx uses), success =
-// everything mastered OR the one-shot mastered-celebration beat. celebrating
-// wins over everything (it's a real, if brief, state); after that,
-// isTechniqueOpen always wins over the all-mastered check — even re-opening
-// an already-mastered technique should read as "explaining this", not fall
-// back to the all-done success state.
-function pickMascotState(
-  progress: ReturnType<typeof getProgress>,
-  isTechniqueOpen: boolean,
-  celebrating: boolean
-): "idle" | "explaining" | "success" {
+// idle = default/current, success = everything mastered OR the one-shot
+// mastered-celebration beat. There's no "explaining" state anymore —
+// technique detail is a full page now (see decisions.md #16), not an
+// overlay opened above the roadmap the mascot needed to react to.
+function pickMascotState(progress: ReturnType<typeof getProgress>, celebrating: boolean): "idle" | "success" {
   if (celebrating) return "success";
-  if (isTechniqueOpen) return "explaining";
   if (progress.percentage === 100 && progress.total > 0) return "success";
   return "idle";
 }
@@ -66,14 +55,9 @@ function pickMascotState(
 // separate instances here — sm here (mobile: compact bar, first roadmap
 // node must stay visible without scrolling) vs lg there (desktop: the
 // mascot as the rail's emotional anchor).
-export function MascotCompanion({
-  plan,
-  isTechniqueOpen,
-  celebrating = false,
-  onCelebrationEnd,
-}: MascotCompanionProps) {
+export function MascotCompanion({ plan, celebrating = false, onCelebrationEnd }: MascotCompanionProps) {
   const progress = getProgress(plan);
-  const mascotState = pickMascotState(progress, isTechniqueOpen, celebrating);
+  const mascotState = pickMascotState(progress, celebrating);
   const speech = celebrating ? MESSAGE_CELEBRATING : pickMessage(progress);
   // Only the celebration plays once — every other state keeps looping as before.
   const loop = !celebrating;
@@ -82,21 +66,16 @@ export function MascotCompanion({
   return (
     <>
       {/* Mobile — compact bar, small enough that the first roadmap node is
-          visible without scrolling. TechniqueModal renders its own peeking
-          mascot inside the Drawer, so this one hides while it's open rather
-          than showing two mascots at once — the progress bar stays put
-          either way, dimmed by the backdrop like any other page content. */}
+          visible without scrolling. */}
       <div className="flex md:hidden flex-col gap-2 w-full">
-        {!isTechniqueOpen && (
-          <MascotWithSpeech
-            state={mascotState}
-            message={speech}
-            size="sm"
-            position="inline"
-            loop={loop}
-            onComplete={onComplete}
-          />
-        )}
+        <MascotWithSpeech
+          state={mascotState}
+          message={speech}
+          size="sm"
+          position="inline"
+          loop={loop}
+          onComplete={onComplete}
+        />
         <ProgressBar
           label={`${progress.mastered}/${progress.total} mastered`}
           value={progress.percentage}
@@ -109,29 +88,7 @@ export function MascotCompanion({
           (not vertically centered); the speech bubble pops out near its
           head, then the progress bar/stats follow directly under it. */}
       <div className="hidden md:flex flex-col items-start gap-4 w-full">
-        {/* showTail=true: now that "top" lays the bubble out in a real flex
-            row beside the mascot (see MascotWithSpeech.tsx) instead of
-            floating above it, the left-pointing tail correctly connects to
-            the mascot again.
-            showBubble={!isTechniqueOpen}: the bubble showed technique.rationale
-            while a technique was open, at unclamped/arbitrary length — that
-            collided with TechniqueModal at real desktop widths (~768-1440px)
-            no position/max-width tuning could reliably clear, since the
-            rail's own footprint was the actual problem, not the modal's
-            placement. The modal already shows the technique's full
-            description, so this is dropping a redundant, geometry-breaking
-            copy of it, not losing information — the "explaining" animation
-            alone still communicates the mascot's reacting to the open node. */}
-        <MascotWithSpeech
-          state={mascotState}
-          message={speech}
-          size="lg"
-          position="top"
-          showTail
-          loop={loop}
-          onComplete={onComplete}
-          showBubble={!isTechniqueOpen}
-        />
+        <MascotWithSpeech state={mascotState} message={speech} size="lg" position="top" showTail loop={loop} onComplete={onComplete} />
         {/* Pinned to the mascot's own 320px (lg) width explicitly — the
             parent rail in page.tsx no longer has a fixed width itself (that
             was crushing the speech bubble beside the mascot into a sliver),

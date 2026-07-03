@@ -6,6 +6,7 @@ import type { AIPlanResponse } from "@/lib/schemas";
 interface SerperRawItem {
   link: string;
   title: string;
+  duration?: string;
 }
 interface SerperResponse {
   organic?: SerperRawItem[];
@@ -14,12 +15,60 @@ interface SerperResponse {
 
 // The shape callSerper actually returns — link renamed to url, matching
 // what Resource/constructSearchUrl expect throughout the rest of this file.
+// durationSeconds is only ever populated for the "videos" endpoint —
+// verified live: Serper's video results include a real "17:41"-style
+// duration string per result, which is what makes time-budget-aware video
+// selection possible without any extra API call.
 interface SerperResultItem {
   url: string;
   title: string;
+  durationSeconds: number | null;
 }
 
 const SERPER_TIMEOUT_MS = 5000;
+
+function parseDurationToSeconds(duration: string | undefined): number | null {
+  if (!duration) return null;
+  const parts = duration.split(":").map((p) => Number.parseInt(p, 10));
+  if (parts.length === 0 || parts.some((p) => Number.isNaN(p))) return null;
+  return parts.reduce((acc, part) => acc * 60 + part, 0);
+}
+
+// Maps the free-text-but-closed-set timeCommitment answer (see
+// TimeCommitmentScreen.tsx's preset options) to how many minutes a single
+// technique's session should roughly take. Not exact science — a genuine
+// product judgment call, documented as such rather than left implicit.
+const SESSION_BUDGET_MINUTES: Record<string, number> = {
+  "15 mins a day": 15,
+  "30 mins a day": 28,
+  "A few hours a week": 45,
+  "Weekends only": 70,
+};
+const DEFAULT_SESSION_BUDGET_MINUTES = 25;
+// The video is the "hero" resource but not the whole session — the rest of
+// the budget is implicitly left for the reading/audio resource.
+const VIDEO_BUDGET_SHARE = 0.6;
+
+export function getVideoTargetSeconds(timeCommitment: string): number {
+  const sessionMinutes = SESSION_BUDGET_MINUTES[timeCommitment] ?? DEFAULT_SESSION_BUDGET_MINUTES;
+  return Math.round(sessionMinutes * VIDEO_BUDGET_SHARE * 60);
+}
+
+// Picks whichever already-fetched candidate's duration is closest to the
+// target — never fetches more results to find a "better" fit, and never
+// excludes a technique's only video option just because every candidate
+// runs long for a 15-minute budget (a worse video is still better than no
+// video). Candidates with unknown duration are only used if nothing with a
+// known duration exists at all.
+function pickClosestDurationMatch(candidates: SerperResultItem[], targetSeconds: number): SerperResultItem {
+  const withDuration = candidates.filter((c) => c.durationSeconds != null);
+  const pool = withDuration.length > 0 ? withDuration : candidates;
+  return pool.reduce((best, candidate) => {
+    const bestDiff = Math.abs((best.durationSeconds ?? targetSeconds) - targetSeconds);
+    const candidateDiff = Math.abs((candidate.durationSeconds ?? targetSeconds) - targetSeconds);
+    return candidateDiff < bestDiff ? candidate : best;
+  }, pool[0]);
+}
 
 // No `num` param — Serper's own default (verified live: 9 organic / 10
 // video results per query) gives the per-type result cache below
@@ -47,7 +96,9 @@ async function callSerper(query: string, endpoint: "search" | "videos"): Promise
     if (!res.ok) return null;
     const data: SerperResponse = await res.json();
     const items = endpoint === "search" ? data.organic : data.videos;
-    return items && items.length > 0 ? items.map((r) => ({ url: r.link, title: r.title })) : null;
+    return items && items.length > 0
+      ? items.map((r) => ({ url: r.link, title: r.title, durationSeconds: parseDurationToSeconds(r.duration) }))
+      : null;
   } catch {
     // Timeout (via the abort above) or any network failure — the caller's
     // existing per-resource fallback to constructSearchUrl handles this.
@@ -64,13 +115,18 @@ export function constructSearchUrl(resource: { type: string; title: string }, ho
     : `https://www.google.com/search?q=${query}`;
 }
 
-export async function enrichPlanWithSerper(plan: AIPlanResponse, hobbyName: string): Promise<AIPlanResponse> {
+export async function enrichPlanWithSerper(
+  plan: AIPlanResponse,
+  hobbyName: string,
+  timeCommitment: string
+): Promise<AIPlanResponse> {
+  const videoTargetSeconds = getVideoTargetSeconds(timeCommitment);
+
   const updatedTechniques = await Promise.all(
     plan.techniques.map(async (technique) => {
-      let videoResults: {url: string, title: string}[] | null = null;
-      let readingResults: {url: string, title: string}[] | null = null;
-      let audioResults: {url: string, title: string}[] | null = null;
-      let videoCount = 0;
+      let videoResults: SerperResultItem[] | null = null;
+      let readingResults: SerperResultItem[] | null = null;
+      let audioResults: SerperResultItem[] | null = null;
       let readingCount = 0;
       let audioCount = 0;
 
@@ -86,15 +142,16 @@ export async function enrichPlanWithSerper(plan: AIPlanResponse, hobbyName: stri
           // never a video-typed resource the player can't actually play in-app.
           if (!videoResults)
             videoResults = await callSerper(`${technique.name} ${hobbyName} tutorial site:youtube.com`, "videos");
-          if (videoResults && videoResults.length > videoCount) {
-            finalUrl = videoResults[videoCount].url;
-            finalTitle = videoResults[videoCount].title;
+          if (videoResults && videoResults.length > 0) {
+            const best = pickClosestDurationMatch(videoResults, videoTargetSeconds);
+            finalUrl = best.url;
+            finalTitle = best.title;
           } else {
             finalUrl = constructSearchUrl(res, hobbyName);
           }
-          videoCount++;
         } else if (res.type === "reading") {
-          if (!readingResults) readingResults = await callSerper(`${technique.name} ${hobbyName} guide article -site:youtube.com`, "search");
+          if (!readingResults)
+            readingResults = await callSerper(`${technique.name} ${hobbyName} guide article -site:youtube.com`, "search");
           if (readingResults && readingResults.length > readingCount) {
             finalUrl = readingResults[readingCount].url;
             finalTitle = readingResults[readingCount].title;

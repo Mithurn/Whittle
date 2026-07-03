@@ -16,6 +16,7 @@ function makeTechnique(overrides: Partial<Technique> & Pick<Technique, "id" | "o
     rationale: "rationale",
     resources: [],
     status: "not_started",
+    notes: [],
     ...overrides,
   };
 }
@@ -50,42 +51,34 @@ describe("MascotCompanion", () => {
       makeTechnique({ id: "t0", order: 0, status: "mastered" }),
       makeTechnique({ id: "t1", order: 1, status: "not_started" }),
     ]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen={false} />);
+    render(<MascotCompanion plan={plan} />);
     expect(screen.getAllByText("1/2 mastered").length).toBeGreaterThan(0);
     expect(screen.getAllByText("50%").length).toBeGreaterThan(0);
   });
 
   it("shows the not-started prompt when nothing is mastered yet", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen={false} />);
+    render(<MascotCompanion plan={plan} />);
     expect(screen.getAllByText("Ready to light the first fire?").length).toBeGreaterThan(0);
   });
 
   it("shows the all-mastered message once everything is complete", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0, status: "mastered" })]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen={false} />);
+    render(<MascotCompanion plan={plan} />);
     expect(screen.getAllByText("The whole trail is glowing — you did it.").length).toBeGreaterThan(0);
   });
 
   it("shows the all-skipped message, matching the locked wording for this empty state", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0, status: "skipped" })]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen={false} />);
+    render(<MascotCompanion plan={plan} />);
     expect(
       screen.getAllByText("You've skipped everything in this plan — want to start fresh?").length
     ).toBeGreaterThan(0);
   });
 
-  it("hides the bubble entirely while a technique is open (mascot alone, desktop rail) — an unclamped rationale bubble there collided with TechniqueModal at real desktop widths, and the modal already shows the technique's full content anyway", () => {
-    const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen />);
-
-    expect(screen.getAllByTestId("mascot").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Ready to light the first fire?")).not.toBeInTheDocument();
-  });
-
   it("shows the celebration copy when celebrating", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
-    render(<MascotCompanion plan={plan} isTechniqueOpen={false} celebrating />);
+    render(<MascotCompanion plan={plan} celebrating />);
     expect(screen.getAllByText("Nice — that's one more in the bag.").length).toBeGreaterThan(0);
   });
 });

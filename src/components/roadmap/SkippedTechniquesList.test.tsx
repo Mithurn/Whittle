@@ -12,6 +12,7 @@ function makeTechnique(overrides: Partial<Technique> & Pick<Technique, "id" | "o
     rationale: "rationale",
     resources: [],
     status: "not_started",
+    notes: [],
     ...overrides,
   };
 }

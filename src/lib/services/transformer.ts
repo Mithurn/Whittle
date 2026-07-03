@@ -80,6 +80,7 @@ export function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse):
       rationale: technique.rationale,
       status: "not_started",
       order,
+      notes: [],
       resources: technique.resources.map((resource): Resource => ({
         id: crypto.randomUUID(),
         type: resource.type,

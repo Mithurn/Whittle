@@ -4,16 +4,26 @@ import type { HobbyPlan, Technique, TechniqueStatus } from "@/types/domain";
 
 interface PlanState {
   currentPlan: HobbyPlan | null;
+  // Transient, session-only signal that a technique was just marked
+  // mastered — set from the /technique/[id] page right before navigating
+  // back to the roadmap, so the roadmap can play its one scoped
+  // celebration beat there instead of on the page that's about to unmount.
+  // Deliberately excluded from partialize below: it must never persist.
+  celebratingTechniqueId: string | null;
   setPlan: (plan: HobbyPlan) => void;
   updateTechniqueStatus: (techniqueId: string, status: TechniqueStatus) => void;
-  updateTechniqueNotes: (techniqueId: string, notes: string) => void;
+  addTechniqueNote: (techniqueId: string, note: { title: string; description: string }) => void;
+  removeTechniqueNote: (techniqueId: string, noteId: string) => void;
   startOver: () => void;
+  triggerCelebration: (techniqueId: string) => void;
+  clearCelebration: () => void;
 }
 
 export const usePlanStore = create<PlanState>()(
   persist(
     (set) => ({
       currentPlan: null,
+      celebratingTechniqueId: null,
 
       setPlan: (plan) => set({ currentPlan: plan }),
 
@@ -30,20 +40,44 @@ export const usePlanStore = create<PlanState>()(
           };
         }),
 
-      updateTechniqueNotes: (techniqueId, notes) =>
+      addTechniqueNote: (techniqueId, note) =>
+        set((state) => {
+          if (!state.currentPlan) return state;
+          const entry = {
+            id: crypto.randomUUID(),
+            title: note.title,
+            description: note.description,
+            createdAt: new Date().toISOString(),
+          };
+          return {
+            currentPlan: {
+              ...state.currentPlan,
+              techniques: state.currentPlan.techniques.map((technique) =>
+                technique.id === techniqueId ? { ...technique, notes: [...technique.notes, entry] } : technique
+              ),
+            },
+          };
+        }),
+
+      removeTechniqueNote: (techniqueId, noteId) =>
         set((state) => {
           if (!state.currentPlan) return state;
           return {
             currentPlan: {
               ...state.currentPlan,
               techniques: state.currentPlan.techniques.map((technique) =>
-                technique.id === techniqueId ? { ...technique, notes } : technique
+                technique.id === techniqueId
+                  ? { ...technique, notes: technique.notes.filter((n) => n.id !== noteId) }
+                  : technique
               ),
             },
           };
         }),
 
       startOver: () => set({ currentPlan: null }),
+
+      triggerCelebration: (techniqueId) => set({ celebratingTechniqueId: techniqueId }),
+      clearCelebration: () => set({ celebratingTechniqueId: null }),
     }),
     {
       name: "hobby-plan-storage",

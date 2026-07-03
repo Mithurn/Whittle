@@ -17,6 +17,13 @@ export interface Resource {
   whyChosen: string; // AI's one-line reason THIS resource fits the user
 }
 
+export interface NoteEntry {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string; // ISO date string
+}
+
 export interface Technique {
   id: string;
   name: string; // e.g. "Forking"
@@ -25,7 +32,7 @@ export interface Technique {
   resources: Resource[]; // 1-3 items, "a mix" of types
   status: TechniqueStatus;
   order: number;
-  notes?: string; // optional user-written note, plain text
+  notes: NoteEntry[]; // user-added notes, most-recent-last; empty until they add one
 }
 
 export interface HobbyPlan {

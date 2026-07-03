@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const rawSkeleton = await structureWithFallback(input);
-    const enrichedPlan = await enrichPlanWithSerper(rawSkeleton, input.hobbyName);
+    const enrichedPlan = await enrichPlanWithSerper(rawSkeleton, input.hobbyName, input.timeCommitment);
     const dedupedPlan = dedupeResourceUrls(enrichedPlan, input.hobbyName);
     return NextResponse.json(toHobbyPlan(input, dedupedPlan), { status: 200 });
   } catch (err) {

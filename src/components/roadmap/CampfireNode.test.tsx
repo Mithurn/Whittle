@@ -20,6 +20,7 @@ function makeNode(state: RoadmapNode["state"], overrides: Partial<Technique> = {
     resources: [],
     status: "not_started",
     order: 0,
+    notes: [],
     ...overrides,
   };
   return { technique, state };

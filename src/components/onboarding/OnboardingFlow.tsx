@@ -6,6 +6,7 @@ import { HobbyInputScreen } from "./HobbyInputScreen";
 import { SkillLevelScreen } from "./SkillLevelScreen";
 import { GoalScreen } from "./GoalScreen";
 import { TimeCommitmentScreen } from "./TimeCommitmentScreen";
+import { KnownTopicsScreen } from "./KnownTopicsScreen";
 import { GenerationLoadingScreen } from "./GenerationLoadingScreen";
 import { GenerationErrorScreen } from "./GenerationErrorScreen";
 import { GeneratePlanRequest } from "@/lib/schemas";
@@ -106,20 +107,33 @@ export function OnboardingFlow() {
     );
   }
 
+  if (step === 4) {
+    return (
+      <TimeCommitmentScreen
+        initialValue={data.timeCommitment || ""}
+        onNext={(timeCommitment) => {
+          setData((d) => ({ ...d, timeCommitment }));
+          setStep(5);
+        }}
+        onBack={() => setStep(3)}
+      />
+    );
+  }
+
   return (
-    <TimeCommitmentScreen
-      initialValue={data.timeCommitment || ""}
-      onNext={(timeCommitment) => {
+    <KnownTopicsScreen
+      initialValue={data.knownTopics || []}
+      onNext={(knownTopics) => {
         // Safe: every prior step only calls its onNext once its own field is
         // valid, so by the time this last step completes, data always has
-        // every required field except this one — this is the one legitimate
-        // Partial -> complete spot. Known topics are no longer collected in
-        // onboarding, so they're always sent empty (the schema defaults it).
-        const request = { ...data, timeCommitment, knownTopics: [] } as GeneratePlanRequest;
+        // every required field — this is the one legitimate Partial ->
+        // complete spot. Known topics are the one field allowed to stay
+        // empty, since this step is optional by design.
+        const request = { ...data, knownTopics } as GeneratePlanRequest;
         setData(request);
         submitPlan(request);
       }}
-      onBack={() => setStep(3)}
+      onBack={() => setStep(4)}
     />
   );
 }

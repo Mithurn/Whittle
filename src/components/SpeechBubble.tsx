@@ -12,6 +12,12 @@ interface SpeechBubbleProps {
   /** Overrides the default 260px cap — e.g. a longer rationale string in a
    * wider container reads as a tall, narrow column at the default width. */
   maxWidthClass?: string;
+  /** Extra classes merged onto the tail's own positioning classes — lets a
+   * caller make the tail responsively hide/show (e.g. MascotWithSpeech's
+   * stackOnMobile, where a left-pointing tail only makes sense once row
+   * layout returns at the sm: breakpoint). Empty by default, so every
+   * existing caller's tail stays visible unconditionally, unchanged. */
+  tailClassName?: string;
 }
 
 export function SpeechBubble({
@@ -19,12 +25,13 @@ export function SpeechBubble({
   animate = true,
   showTail = true,
   maxWidthClass = "max-w-[260px]",
+  tailClassName = "",
 }: SpeechBubbleProps) {
   return (
     <div className="relative filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
       {showTail && (
         <svg
-          className="absolute -left-2 top-4 w-3 h-4 text-zinc-50"
+          className={`absolute -left-2 top-4 w-3 h-4 text-zinc-50 ${tailClassName}`}
           viewBox="0 0 8 12"
           fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"

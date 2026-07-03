@@ -42,7 +42,7 @@ export function SkillLevelScreen({ initialValue, onNext, onBack }: SkillLevelScr
 
       {/* ── Content ── */}
       <div className="flex flex-col flex-1 items-center justify-center px-5 pt-20 sm:pt-0 w-full max-w-sm sm:max-w-2xl mx-auto">
-        <MascotWithSpeech state="idle" message="Nice! How much do you know already?" size="md" position="inline" />
+        <MascotWithSpeech state="idle" message="Nice! How much do you know already?" size="md" position="inline" stackOnMobile />
 
         <div role="radiogroup" aria-label="Skill level" className="w-full max-w-sm mx-auto mt-14 flex flex-col gap-3">
           {SKILL_LEVELS.map(({ value, label, description, Icon }) => {

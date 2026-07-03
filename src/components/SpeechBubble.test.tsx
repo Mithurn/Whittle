@@ -37,4 +37,11 @@ describe("SpeechBubble", () => {
     const { container } = render(<SpeechBubble text="hi" showTail={false} />);
     expect(container.querySelector("svg")).toBeNull();
   });
+
+  it("merges tailClassName onto the tail's classes without removing it from the DOM", () => {
+    const { container } = render(<SpeechBubble text="hi" tailClassName="hidden sm:block" />);
+    const tail = container.querySelector("svg");
+    expect(tail).not.toBeNull();
+    expect(tail).toHaveClass("hidden", "sm:block");
+  });
 });

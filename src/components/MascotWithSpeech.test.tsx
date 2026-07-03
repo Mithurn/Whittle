@@ -59,4 +59,21 @@ describe("MascotWithSpeech", () => {
     render(<MascotWithSpeech state="idle" message="hi" />);
     expect(await screen.findByTestId("mascot")).toHaveAttribute("data-size", "220");
   });
+
+  it("stackOnMobile still renders exactly one mascot and one bubble instance", async () => {
+    render(
+      <MascotWithSpeech state="idle" message="Already know a few things?" position="inline" stackOnMobile />
+    );
+    expect(await screen.findAllByTestId("mascot")).toHaveLength(1);
+    expect(screen.getAllByText("Already know a few things?")).toHaveLength(1);
+  });
+
+  it("stackOnMobile is off by default — existing 'inline' callers are unaffected", async () => {
+    const { container } = render(
+      <MascotWithSpeech state="idle" message="Nice! How much do you know already?" position="inline" />
+    );
+    await screen.findByTestId("mascot");
+    expect(container.querySelector(".inline-flex")).toBeInTheDocument();
+    expect(container.querySelector(".flex-col")).not.toBeInTheDocument();
+  });
 });

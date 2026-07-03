@@ -38,6 +38,14 @@ interface MascotWithSpeechProps {
    * position/max-width combination could reliably clear. Defaults to true so
    * every existing caller keeps showing its bubble unchanged. */
   showBubble?: boolean;
+  /** position="inline" only — stacks mascot above bubble below the sm:
+   * breakpoint instead of a side-by-side row. A fixed "md"/"lg" mascot size
+   * leaves too little row width on a ~375px viewport for anything but the
+   * shortest message (confirmed live: even a 33-character message wrapped
+   * into an unreadable one-word-per-line column). Off by default —
+   * MascotCompanion's mobile bar already uses "sm" (56px), small enough to
+   * stay in a row, so it's intentionally left unaffected. */
+  stackOnMobile?: boolean;
 }
 
 const SIZE_PX: Record<MascotWithSpeechSize, number> = {
@@ -71,6 +79,7 @@ export function MascotWithSpeech({
   loop = true,
   onComplete,
   showBubble = true,
+  stackOnMobile = false,
 }: MascotWithSpeechProps) {
   const pixelSize = SIZE_PX[size];
   const mascot = (
@@ -82,6 +91,20 @@ export function MascotWithSpeech({
   }
 
   if (position === "inline") {
+    if (stackOnMobile) {
+      return (
+        <div className={`flex flex-col items-center gap-3 sm:flex-row ${className}`}>
+          {mascot}
+          <SpeechBubble
+            text={message}
+            animate={animate}
+            showTail={showTail}
+            maxWidthClass="w-full sm:w-auto sm:max-w-[260px]"
+            tailClassName="hidden sm:block"
+          />
+        </div>
+      );
+    }
     return (
       <div className={`inline-flex items-center gap-3 ${className}`}>
         {mascot}

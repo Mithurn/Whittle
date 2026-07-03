@@ -38,7 +38,7 @@ export function GoalScreen({ initialValue, hobbyName, onNext, onBack }: GoalScre
 
       {/* ── Content ── */}
       <div className="flex flex-col flex-1 items-center justify-center px-5 w-full max-w-sm sm:max-w-2xl mx-auto">
-        <MascotWithSpeech state="idle" message="What are you working toward?" size="md" position="inline" />
+        <MascotWithSpeech state="idle" message="What are you working toward?" size="md" position="inline" stackOnMobile />
 
         {/* Wider than the other inputs on sm+ — the placeholder interpolates the
             user's actual hobby name, which can run longer than a short example. */}

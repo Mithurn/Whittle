@@ -34,9 +34,11 @@ async function completeOnboardingUpToSubmit(user: ReturnType<typeof userEvent.se
   await user.type(screen.getByRole("textbox"), "Beat my dad at chess");
   await user.click(screen.getByRole("button", { name: "Continue" }));
 
-  // Selecting the last field submits the plan directly — there's no
-  // separate known-topics step anymore.
   await user.click(screen.getByRole("radio", { name: /a few hours a week/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+
+  // Known topics is optional — Continue with nothing typed submits an
+  // empty list, matching the "should feel skippable" requirement.
   await user.click(screen.getByRole("button", { name: "Continue" }));
 }
 
@@ -69,6 +71,41 @@ describe("OnboardingFlow", () => {
       })
     );
     expect(usePlanStore.getState().currentPlan).toEqual(FAKE_PLAN);
+  });
+
+  it("includes typed known topics in the submitted request", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => FAKE_PLAN,
+    }) as unknown as typeof fetch;
+
+    render(<OnboardingFlow />);
+    await user.click(screen.getByRole("button", { name: "Get Started" }));
+    await user.type(screen.getByRole("textbox"), "Chess");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("radio", { name: /beginner/i }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByRole("textbox"), "Beat my dad at chess");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("radio", { name: /a few hours a week/i }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await user.type(screen.getByRole("textbox", { name: /add a topic/i }), "castling{enter}en passant{enter}");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/generate-plan",
+      expect.objectContaining({
+        body: JSON.stringify({
+          hobbyName: "Chess",
+          level: "beginner",
+          goal: "Beat my dad at chess",
+          timeCommitment: "A few hours a week",
+          knownTopics: ["castling", "en passant"],
+        }),
+      })
+    );
   });
 
   it("shows the error screen on failure, and retries the same request", async () => {

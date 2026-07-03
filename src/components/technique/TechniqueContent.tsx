@@ -50,10 +50,17 @@ export function VideoSection({ resources }: { resources: Resource[] }) {
 
 type ArticleFetchState = { status: "loading" } | { status: "loaded"; content: string } | { status: "error" };
 
+interface ArticleSectionProps {
+  resource: Resource;
+  cache: React.RefObject<Map<string, string>>;
+  hobbyName?: string;
+  level?: string;
+}
+
 // Auto-fetches the moment this section renders — no extra click to enter
 // "reader mode". Each article manages its own fetch lifecycle so one slow/
 // failing source never blocks another.
-function ArticleSection({ resource, cache }: { resource: Resource; cache: React.RefObject<Map<string, string>> }) {
+function ArticleSection({ resource, cache, hobbyName, level }: ArticleSectionProps) {
   const [state, setState] = useState<ArticleFetchState>(() => {
     const cached = cache.current.get(resource.id);
     return cached ? { status: "loaded", content: cached } : { status: "loading" };
@@ -62,7 +69,10 @@ function ArticleSection({ resource, cache }: { resource: Resource; cache: React.
   useEffect(() => {
     if (state.status !== "loading") return;
     let cancelled = false;
-    fetch(`/api/read-article?url=${encodeURIComponent(resource.url)}`)
+    const params = new URLSearchParams({ url: resource.url });
+    if (hobbyName) params.set("hobbyName", hobbyName);
+    if (level) params.set("level", level);
+    fetch(`/api/read-article?${params.toString()}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`read-article responded with ${res.status}`);
         const data: { content?: string } = await res.json();
@@ -116,12 +126,20 @@ function ArticleSection({ resource, cache }: { resource: Resource; cache: React.
   );
 }
 
-export function ReadingSection({ resources }: { resources: Resource[] }) {
+export function ReadingSection({
+  resources,
+  hobbyName,
+  level,
+}: {
+  resources: Resource[];
+  hobbyName?: string;
+  level?: string;
+}) {
   const cache = useRef<Map<string, string>>(new Map());
   return (
     <div className="flex flex-col gap-10">
       {resources.map((resource) => (
-        <ArticleSection key={resource.id} resource={resource} cache={cache} />
+        <ArticleSection key={resource.id} resource={resource} cache={cache} hobbyName={hobbyName} level={level} />
       ))}
     </div>
   );

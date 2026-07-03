@@ -137,7 +137,13 @@ export default function TechniquePage() {
 
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
         {currentTab === "video" && <VideoSection resources={video} />}
-        {currentTab === "reading" && <ReadingSection resources={reading} />}
+        {currentTab === "reading" && (
+          <ReadingSection
+            resources={reading}
+            hobbyName={currentPlan.hobbyName}
+            level={currentPlan.level}
+          />
+        )}
         {currentTab === "audio" && <AudioSection resources={audio} />}
         {currentTab === "master" && (
           <div className="flex flex-col gap-6">

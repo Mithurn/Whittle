@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { condenseArticle } from "@/lib/services/article-service";
+import type { SkillLevel } from "@/types/domain";
 
 const JINA_READER_ENDPOINT = "https://r.jina.ai/";
 const FETCH_TIMEOUT_MS = 8000;
@@ -35,6 +37,8 @@ function stripJinaMetadataHeader(raw: string): string {
   return raw.slice(markerIndex + JINA_MARKDOWN_MARKER.length).trim();
 }
 
+const VALID_SKILL_LEVELS = new Set<string>(["beginner", "intermediate", "advanced"]);
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
   if (!url) {
@@ -65,16 +69,31 @@ export async function GET(req: NextRequest) {
     if (!res.ok) {
       return NextResponse.json({ error: "Could not fetch article" }, { status: 502 });
     }
-    const content = stripJinaMetadataHeader(await res.text());
-    if (!content.trim()) {
+    const rawContent = stripJinaMetadataHeader(await res.text());
+    if (!rawContent.trim()) {
       return NextResponse.json({ error: "Article was empty" }, { status: 502 });
     }
+
+    // Optionally condense the article with Groq for this user's hobby + skill level.
+    // hobbyName and level are optional query params — if absent (old clients, tests),
+    // we skip condensing and return the raw article. condenseArticle returns null on
+    // any failure, and we fall back to raw — never worse than before.
+    const hobbyName = req.nextUrl.searchParams.get("hobbyName") ?? undefined;
+    const rawLevel = req.nextUrl.searchParams.get("level") ?? undefined;
+    const level = rawLevel && VALID_SKILL_LEVELS.has(rawLevel) ? (rawLevel as SkillLevel) : undefined;
+
+    let content = rawContent;
+    if (hobbyName && level) {
+      const condensed = await condenseArticle(rawContent, { hobbyName, level });
+      if (condensed) content = condensed;
+    }
+
     return NextResponse.json({ content });
   } catch (err) {
     // Timeout (via the abort above), network failure, or a source blocking
     // the fetch (paywall, robots.txt) — r.jina.ai is a free, no-SLA
     // third-party service, so this is expected, normal behavior to handle,
-    // not an edge case. The caller (TechniqueModal) falls back to opening
+    // not an edge case. The caller (TechniqueContent) falls back to opening
     // the real URL directly on any non-200 response.
     console.error("[read-article] failed", err);
     return NextResponse.json({ error: "Could not fetch article" }, { status: 502 });

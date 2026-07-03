@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink } from "lucide-react";
+import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Lottie from "lottie-react";
 import { usePlanStore } from "@/store/plan-store";
@@ -40,10 +40,6 @@ export default function TechniquePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [noteText, setNoteText] = useState(() => {
-    // If the user already wrote notes for this technique, pre-fill them
-    return technique?.notes?.map(n => n.description).join("\n\n") || "";
-  });
 
   const { video, reading } = useMemo(() => {
     return technique ? categorizeResources(technique.resources) : { video: [], reading: [], audio: [] };
@@ -147,9 +143,6 @@ export default function TechniquePage() {
   }
 
   function handleMastered() {
-    if (noteText.trim()) {
-      addTechniqueNote(technique!.id, { title: "Learning Note", description: noteText.trim() });
-    }
     updateTechniqueStatus(technique!.id, "mastered");
     triggerCelebration(technique!.id);
     router.push("/");
@@ -218,7 +211,7 @@ export default function TechniquePage() {
                   );
                 })()}
                 
-                <div className={(video.length > 0) ? "-mt-8 relative z-10" : ""}>
+                <div>
                   {renderSlideHeader("Introduction", true)}
                   <p className="font-sans text-lg text-text-muted leading-relaxed mt-4">
                     {technique.lesson?.intro || technique.description}
@@ -320,17 +313,49 @@ export default function TechniquePage() {
                   </p>
                 </div>
                 
-                <div className="flex flex-col gap-3 max-w-lg mx-auto w-full">
-                  <label htmlFor="learning-notes" className="font-label text-sm font-semibold text-text-primary">
-                    My Learning Notes
-                  </label>
-                  <textarea
-                    id="learning-notes"
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="I learned that keeping my hands up is crucial when slipping..."
-                    className="min-h-32 w-full resize-y rounded-xl border border-border bg-surface-1 p-4 font-sans text-sm text-text-primary placeholder:text-text-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
-                  />
+                <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full px-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="font-heading text-lg font-bold text-text-primary">
+                      Your Lesson Notes
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsNotesOpen(true)}
+                      className="text-primary text-sm font-semibold hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={16} /> Add Note
+                    </button>
+                  </div>
+                  
+                  {technique.notes && technique.notes.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {technique.notes.map(note => (
+                        <div 
+                          key={note.id} 
+                          onClick={() => setIsNotesOpen(true)}
+                          className="rounded-2xl border border-border bg-surface-1 p-5 cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all text-left group"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-heading font-semibold text-text-primary truncate pr-2 group-hover:text-primary transition-colors">{note.title}</h3>
+                            <Edit3 size={14} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          </div>
+                          <p className="font-sans text-sm text-text-muted line-clamp-3 leading-relaxed">{note.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-border border-dashed bg-surface-1/50 p-10 text-center flex flex-col items-center justify-center">
+                      <p className="font-sans text-text-muted mb-4">You haven't taken any notes for this lesson yet.</p>
+                      <button
+                        type="button"
+                        onClick={() => setIsNotesOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-surface-2 px-5 py-2.5 font-label text-sm font-semibold text-text-primary hover:bg-surface-3 transition-colors shadow-sm border border-border/50"
+                      >
+                        <Edit3 size={16} />
+                        Add your first note
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-center pt-4">

@@ -99,25 +99,40 @@ export function PathConnector({
       style={{ width: viewBoxWidth, height: resolvedHeight }}
       viewBox={`${viewBoxX} 0 ${viewBoxWidth} ${resolvedHeight}`}
     >
+      {/* Base track */}
       <motion.path
         d={d}
         fill="none"
         stroke={style.stroke}
         strokeWidth={style.strokeWidth}
         strokeLinecap="round"
-        style={{ filter: glow }}
+        style={{ filter: nearCurrent ? "none" : glow }}
         initial={{ opacity: 0 }}
-        animate={
-          nearCurrent && !reducedMotion
-            ? { opacity: [baseOpacity * 0.7, baseOpacity, baseOpacity * 0.7] }
-            : { opacity: baseOpacity }
-        }
-        transition={
-          nearCurrent && !reducedMotion
-            ? { opacity: { duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: 0.3 } }
-            : { duration: 0.4, ease: "easeOut" }
-        }
+        animate={{ opacity: nearCurrent ? baseOpacity * 0.4 : baseOpacity }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       />
+      {/* Glowing energy pulse for active paths */}
+      {nearCurrent && (
+        <motion.path
+          d={d}
+          fill="none"
+          stroke="var(--mascot-gold)"
+          strokeWidth={style.strokeWidth + 1}
+          strokeLinecap="round"
+          strokeDasharray="16 24"
+          style={{ filter: glow }}
+          initial={{ strokeDashoffset: 40, opacity: 0 }}
+          animate={!reducedMotion ? { strokeDashoffset: 0, opacity: baseOpacity } : { opacity: baseOpacity }}
+          transition={
+            !reducedMotion
+              ? { 
+                  strokeDashoffset: { duration: 1, repeat: Infinity, ease: "linear" },
+                  opacity: { duration: 0.8, ease: "easeInOut" }
+                }
+              : { duration: 0.4 }
+          }
+        />
+      )}
     </svg>
   );
 }

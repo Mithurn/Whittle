@@ -38,13 +38,6 @@ function makeValidAiPlan() {
   };
 }
 
-function makeAiPlanWithDuplicateUrls() {
-  const plan = makeValidAiPlan();
-  plan.techniques[1].resources[0].url = "https://example.com/duplicate";
-  plan.techniques[0].resources[0].url = "https://example.com/duplicate";
-  return plan;
-}
-
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body } as Response;
 }
@@ -66,13 +59,24 @@ function makeRequest(body: unknown): NextRequest {
 
 describe("POST /api/generate-plan", () => {
   it("returns a valid HobbyPlan enriched with Serper.dev urls", async () => {
-    global.fetch = vi.fn(async (url: string | URL | Request) => {
+    global.fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes("serper.dev/videos")) {
         return jsonResponse({ videos: [{ link: "https://youtube.com/watch?v=serpervideo", title: "Serper Video" }] });
       }
       if (urlStr.includes("serper.dev/search")) {
-        return jsonResponse({ organic: [{ link: "https://example.com/serperarticle", title: "Serper Article" }] });
+        // Reading and audio resources both hit this same endpoint —
+        // differentiate by query text so the test actually exercises two
+        // distinct real results instead of coincidentally colliding.
+        const body = JSON.parse(String(init?.body));
+        const isPodcastQuery = String(body.q).includes("podcast");
+        return jsonResponse({
+          organic: [
+            isPodcastQuery
+              ? { link: "https://example.com/serperpodcast", title: "Serper Podcast" }
+              : { link: "https://example.com/serperarticle", title: "Serper Article" },
+          ],
+        });
       }
       if (urlStr.includes("groq.com")) {
         return jsonResponse({
@@ -80,7 +84,7 @@ describe("POST /api/generate-plan", () => {
           usage: {},
         });
       }
-      throw new Error(`unexpected fetch to ${String(url)}`);
+      throw new Error(`unexpected fetch to ${urlStr}`);
     }) as unknown as typeof fetch;
 
     const res = await POST(makeRequest(validRequestBody));
@@ -93,8 +97,8 @@ describe("POST /api/generate-plan", () => {
     expect(json.techniques[0].resources[0].url).toBe("https://youtube.com/watch?v=serpervideo");
     // Reading resource uses Serper search
     expect(json.techniques[0].resources[1].url).toBe("https://example.com/serperarticle");
-    // Audio resource now uses Serper search for podcast episodes
-    expect(json.techniques[0].resources[2].url).toBe("https://example.com/serperarticle");
+    // Audio resource uses a distinct Serper search (podcast-specific query)
+    expect(json.techniques[0].resources[2].url).toBe("https://example.com/serperpodcast");
   });
 
   it("returns 400 for an invalid request body", async () => {
@@ -126,14 +130,52 @@ describe("POST /api/generate-plan", () => {
     expect(json.techniques[0].resources[1].url).toMatch(/^https:\/\/www\.google\.com\/search\?q=/);
   });
 
-  it("retries Groq once and recovers when the first attempt fails schema validation", async () => {
+  it("replaces a duplicate URL (e.g. two resources' Serper searches landing on the same result) with a constructSearchUrl fallback, without retrying Groq", async () => {
     let groqCalls = 0;
-    let sc = 0;
     global.fetch = vi.fn(async (url: string | URL | Request) => {
       const urlStr = String(url);
       if (urlStr.includes("serper.dev")) {
-        sc++;
-        return jsonResponse({ videos: [{ link: `vid${sc}` }], organic: [{ link: `org${sc}` }] });
+        // Every Serper call returns the exact same result regardless of
+        // query — simulates two different resources colliding on one URL.
+        return jsonResponse({
+          organic: [{ link: "https://example.com/same-article", title: "Same Article" }],
+          videos: [{ link: "https://example.com/same-article", title: "Same Article" }],
+        });
+      }
+      if (urlStr.includes("groq.com")) {
+        groqCalls++;
+        return jsonResponse({
+          choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
+          usage: {},
+        });
+      }
+      throw new Error(`unexpected fetch to ${urlStr}`);
+    }) as unknown as typeof fetch;
+
+    const res = await POST(makeRequest(validRequestBody));
+    expect(res.status).toBe(200);
+    // No retry — duplicates are cleaned up locally after the fact, not by
+    // re-generating the plan (that would just waste tokens on the same
+    // Serper collision happening again).
+    expect(groqCalls).toBe(1);
+
+    const json = await res.json();
+    const urls = json.techniques[0].resources.map((r: { url: string }) => r.url);
+    expect(new Set(urls).size).toBe(urls.length);
+    // First occurrence keeps the real Serper result...
+    expect(urls[0]).toBe("https://example.com/same-article");
+    // ...the rest fall back to constructed search URLs instead of
+    // silently duplicating the first.
+    expect(urls[1]).toMatch(/^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/);
+    expect(urls[2]).toMatch(/^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/);
+  });
+
+  it("retries Groq once and recovers when the first attempt fails schema validation", async () => {
+    let groqCalls = 0;
+    global.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = String(url);
+      if (urlStr.includes("serper.dev")) {
+        return jsonResponse({ organic: [{ link: "https://example.com/a", title: "A" }] });
       }
       if (urlStr.includes("groq.com")) {
         groqCalls++;
@@ -148,43 +190,12 @@ describe("POST /api/generate-plan", () => {
           usage: {},
         });
       }
-      throw new Error(`unexpected fetch to ${String(url)}`);
+      throw new Error(`unexpected fetch to ${urlStr}`);
     }) as unknown as typeof fetch;
 
     const res = await POST(makeRequest(validRequestBody));
     expect(res.status).toBe(200);
     expect(groqCalls).toBe(2);
-  });
-
-  it("retries Groq once and recovers when the first attempt returns duplicate resource URLs", async () => {
-    let groqCalls = 0;
-    let sc = 0;
-    global.fetch = vi.fn(async (url: string | URL | Request) => {
-      const urlStr = String(url);
-      if (urlStr.includes("serper.dev")) {
-        sc++;
-        return jsonResponse({ videos: [{ link: `vid${sc}` }], organic: [{ link: `org${sc}` }] });
-      }
-      if (urlStr.includes("groq.com")) {
-        groqCalls++;
-        const plan = groqCalls === 1 ? makeAiPlanWithDuplicateUrls() : makeValidAiPlan();
-        return jsonResponse({
-          choices: [{ message: { content: JSON.stringify(plan) } }],
-          usage: {},
-        });
-      }
-      throw new Error(`unexpected fetch to ${String(url)}`);
-    }) as unknown as typeof fetch;
-
-    const res = await POST(makeRequest(validRequestBody));
-    expect(res.status).toBe(200);
-    expect(groqCalls).toBe(2);
-
-    const json = await res.json();
-    const urls = json.techniques.flatMap((t: { resources: { url: string }[] }) =>
-      t.resources.map((r) => r.url)
-    );
-    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it("returns a structured error response when Groq fails repeatedly", async () => {

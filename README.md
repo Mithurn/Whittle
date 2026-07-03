@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6.svg?style=flat-square&logo=typescript" alt="TypeScript strict mode">
   <img src="https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4.svg?style=flat-square&logo=tailwindcss" alt="Tailwind CSS v4">
   <img src="https://img.shields.io/badge/Zustand-State-443E38.svg?style=flat-square" alt="Zustand">
-  <img src="https://img.shields.io/badge/AI--Powered-Gemini_%2B_Groq-FF6B6B.svg?style=flat-square" alt="AI powered: Gemini + Groq">
+  <img src="https://img.shields.io/badge/AI--Powered-Groq_%2B_Serper-FF6B6B.svg?style=flat-square" alt="AI powered: Groq + Serper">
 </p>
 
 <p align="center">
@@ -39,9 +39,9 @@ There are no accounts and no backend database. That's a deliberate call, not a m
 
 ## Key Features
 
-- **AI-generated, personalized roadmap** — 5-8 techniques, sequenced foundational-to-advanced, tailored to stated skill level/goal/time commitment
-- **Real web-search grounding** for resource discovery, with every resource URL routed through a constructed, guaranteed-working search link rather than trusting a raw AI-provided one (see [Architecture](#architecture) — this was a real reliability fix, not a hypothetical)
-- **Full fallback chain** on AI generation — grounding failure, structuring retry, and a real error state with retry affordance; never a blank screen or raw 500
+- **AI-generated, personalized roadmap** — 5-8 techniques, sequenced foundational-to-advanced, tailored to stated skill level/goal/time commitment, exactly 3 resources per technique (video, reading, and one more of either)
+- **Real web-search resource discovery** — every resource link comes from an actual Serper.dev (Google Search/Video API) search, not an AI-invented URL, with a constructed search-link fallback whenever a search comes up empty (see [Architecture](#architecture))
+- **Full fallback chain** on AI generation — structuring retry, per-resource search fallback, a post-enrichment duplicate-URL cleanup pass, and a real error state with retry affordance; never a blank screen or raw 500
 - **Mark Mastered / Skip** — skip is fully reversible via a dedicated "bring back" action, never framed as giving up
 - **Winding roadmap path** (Duolingo/wondering.app-inspired), zone-grouped into thirds, with no locked nodes — every technique is always accessible, nothing gates a later one behind an earlier one
 - **Mascot companion** — a Lottie-driven character reacting to real state (idle, explaining a technique, thinking, success, error), not decorative animation
@@ -51,7 +51,7 @@ There are no accounts and no backend database. That's a deliberate call, not a m
 
 ## Architecture
 
-Two independent free-tier AI providers, each doing the job it's actually good at, with a validated fallback at every step:
+A decoupled two-pass pipeline: one pass invents the *plan* (Groq, from its own reasoning), a second pass finds *real, currently-live links* for it (Serper.dev, an actual Google Search/Video API) — deliberately separating "what should this plan contain" from "what real page backs each resource," instead of asking one model to do both at once.
 
 ```mermaid
 graph TB
@@ -63,30 +63,28 @@ graph TB
     end
 
     subgraph API["Route Handler — /api/generate-plan"]
-        B --> F{"Gemini 2.5-flash<br/>+ Google Search grounding"}
-        F -->|grounding succeeds| G["Groq gpt-oss-120b<br/>JSON-schema structuring"]
-        F -->|grounding fails| H["Groq gpt-oss-120b<br/>ungrounded prompt"]
-        G --> I{Zod validation}
-        H --> I
-        I -->|fails once| G
-        I -->|fails twice| J["502 structured error<br/>(real retry UI, never blank)"]
-        I -->|valid| K[toHobbyPlan]
-        K --> L["Every resource URL forced through<br/>constructSearchUrl — guaranteed to resolve"]
-        L --> M["sourceName still derived from the AI's<br/>original URL — keeps badge variety"]
-        M --> B
+        B --> F["Pass 1 — Groq gpt-oss-120b<br/>JSON skeleton: techniques, resource titles,<br/>every url = placeholder"]
+        F --> G{Zod validation}
+        G -->|fails once| F
+        G -->|fails twice| H["502 structured error<br/>(real retry UI, never blank)"]
+        G -->|valid| I["Pass 2 — Serper.dev<br/>parallel per-resource search"]
+        I --> J["Real result found?<br/>trust it, keep its title too"]
+        I --> K["No result / timeout (5s)?<br/>constructSearchUrl fallback"]
+        J --> L["Post-pass dedup:<br/>2nd occurrence of any URL →<br/>constructSearchUrl instead"]
+        K --> L
+        L --> B
     end
 
     style F fill:#EB8928,color:#111318
-    style G fill:#FABA0E,color:#111318
-    style H fill:#FABA0E,color:#111318
-    style J fill:#ffb4ab,color:#111318
+    style I fill:#FABA0E,color:#111318
+    style H fill:#ffb4ab,color:#111318
 ```
 
-**Why two providers, not one:** Gemini's `2.5-flash` model rejects combining Google Search grounding with structured JSON output in the same request (a `400`, reproduced directly against the live API, not assumed from docs). So grounding and structuring are split into two calls — Gemini finds real resources via actual search, Groq's `gpt-oss-120b` (chosen for its ~17x lower structuring latency in a head-to-head test — ~118ms vs. ~2000ms for the equivalent Gemini call — and to keep the two calls on separate free-tier quota pools) converts that into schema-validated JSON.
+**Why two passes instead of one search-grounded call:** this replaced an earlier Gemini-grounding-based pipeline (Google Search grounding + a second structuring call). That approach worked, but Gemini's grounding URLs turned out to be `vertexaisearch.cloud.google.com` redirect wrappers with a limited validity window, not permanent links — a real problem for a plan that persists in `localStorage` indefinitely with no refresh mechanism. The current design trades "curation informed by live search" for "strict schema adherence + permanent, directly-sourced URLs, found independently of what the LLM imagined" — Groq's own training data is treated as sufficient for hobby-curriculum sequencing, and Serper's real search results replace every resource link afterward regardless.
 
-**Why every resource link is a constructed search URL, even on the happy path:** grounded URLs from live search still turned out to 404 in practice. Rather than trust an AI-provided link, every resource's `url` is routed through a constructed, guaranteed-resolving search query — while `sourceName` (the badge you see, e.g. "YouTube" or "Chess.com") is still derived from the AI's original URL, so the resource variety stays visible even though the link itself is guaranteed to work.
+**Why a dedup pass instead of a duplicate-triggered retry:** two different resources' Serper searches can land on the same top result. Retrying the whole Groq generation over a link collision would burn tokens on a problem that's cheap to fix locally — so duplicates are cleaned up by walking the finished plan once and replacing any repeat URL with a constructed search link, keeping the first occurrence as the "real" one.
 
-**Defense in depth:** Groq's JSON-schema mode biases the model toward well-formed output, but the server re-validates every response against the same Zod schema regardless — provider-side structured output is treated as best-effort prompting, not a contract.
+**Defense in depth:** every provider response is re-validated against the same Zod schema regardless of what structured-output mode was requested from it — structured output is treated as best-effort prompting, not a contract.
 
 ## Tech Stack
 
@@ -96,7 +94,7 @@ graph TB
 | UI | React 19, TypeScript (strict), Tailwind CSS v4 |
 | State | Zustand + `persist` middleware (`localStorage`) — the only thing that persists is one `HobbyPlan` object; everything else (progress, visible/skipped lists) is computed on read, never stored |
 | Validation | Zod — request validation, AI-response schema validation, both independent of provider-side schema features |
-| AI | Gemini 2.5-flash (Google Search grounding) + Groq `openai/gpt-oss-120b` (structuring) |
+| AI | Groq `openai/gpt-oss-120b` (plan skeleton) + Serper.dev (real per-resource search) |
 | Animation | `motion` + `lottie-react`, lazy-loaded via `next/dynamic` (confirmed via build output: ~860KB of Lottie code is excluded from the required-upfront JS for the main route) |
 | Overlays | `@base-ui/react` (`Dialog` for desktop, `Drawer` for mobile) |
 | Testing | Vitest + React Testing Library — 149 tests, all provider calls mocked |
@@ -118,8 +116,8 @@ npm install
 Create `.env.local` in the project root (see `.env.example`):
 
 ```
-GEMINI_API_KEY=your_key_here
 GROQ_API_KEY=your_key_here
+SERPER_API_KEY=your_key_here
 ```
 
 ```bash

@@ -96,29 +96,60 @@ function buildSkeletonPrompt(input: GeneratePlanRequest): string {
   );
 }
 
-async function callSerper(query: string, endpoint: "search" | "videos"): Promise<{ url: string; title: string }[] | null> {
+// Minimal shape of what we actually read from Serper's raw response — typed
+// properly instead of `any` (CLAUDE.md rule 9: no `any` without stopping to
+// ask first; the fields used here are simple and stable enough not to need one).
+interface SerperRawItem {
+  link: string;
+  title: string;
+}
+interface SerperResponse {
+  organic?: SerperRawItem[];
+  videos?: SerperRawItem[];
+}
+
+// The shape callSerper actually returns — link renamed to url, matching
+// what Resource/constructSearchUrl expect throughout the rest of this file.
+interface SerperResultItem {
+  url: string;
+  title: string;
+}
+
+const SERPER_TIMEOUT_MS = 5000;
+
+// No `num` param — Serper's own default (verified live: 9 organic / 10
+// video results per query) gives the per-type result cache below
+// (videoResults/readingResults/audioResults) enough headroom to serve a
+// technique with two "reading"-type resources (see RESOURCE_MIX_RULE) by
+// indexing further into the same array. An earlier version explicitly
+// passed num:1, which reproducibly capped every query to exactly 1 result —
+// confirmed against the live API, not assumed — silently starving that
+// second resource every time.
+async function callSerper(query: string, endpoint: "search" | "videos"): Promise<SerperResultItem[] | null> {
   const apiKey = process.env.SERPER_API_KEY;
   if (!apiKey) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SERPER_TIMEOUT_MS);
   try {
     const res = await fetch(`https://google.serper.dev/${endpoint}`, {
       method: "POST",
       headers: {
         "X-API-KEY": apiKey,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ q: query, num: 1 })
+      body: JSON.stringify({ q: query }),
+      signal: controller.signal,
     });
     if (!res.ok) return null;
-    const data = await res.json();
-    if (endpoint === "search" && data.organic?.length > 0) {
-      return data.organic.map((r: any) => ({ url: r.link, title: r.title }));
-    }
-    if (endpoint === "videos" && data.videos?.length > 0) {
-      return data.videos.map((r: any) => ({ url: r.link, title: r.title }));
-    }
+    const data: SerperResponse = await res.json();
+    const items = endpoint === "search" ? data.organic : data.videos;
+    return items && items.length > 0 ? items.map((r) => ({ url: r.link, title: r.title })) : null;
+  } catch {
+    // Timeout (via the abort above) or any network failure — the caller's
+    // existing per-resource fallback to constructSearchUrl handles this.
     return null;
-  } catch (e) {
-    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -219,28 +250,25 @@ async function callGroq(userContent: string): Promise<unknown> {
   return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent);
 }
 
-function hasDuplicateResourceUrls(plan: AIPlanResponse): boolean {
-  const urls = plan.techniques.flatMap((technique) =>
-    technique.resources.map((resource) => resource.url)
-  );
-  // Exclude placeholders from uniqueness check
-  const actualUrls = urls.filter(u => u !== "https://placeholder.com" && u !== "UNMATCHED");
-  return new Set(actualUrls).size !== actualUrls.length;
-}
-
 async function structureWithFallback(userContent: string): Promise<AIPlanResponse> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const raw = await callGroq(userContent);
       const parsed = AIPlanResponseSchema.safeParse(raw);
-      if (parsed.success && !hasDuplicateResourceUrls(parsed.data)) return parsed.data;
-      lastError = parsed.success ? new Error("Duplicate resource URLs across plan") : parsed.error;
+      // No duplicate-URL check here anymore — at this stage every resource's
+      // url is uniformly the "https://placeholder.com" literal (see
+      // buildSkeletonPrompt), so a same-value check would just compare
+      // placeholders against each other and never find a real collision.
+      // Real duplicates can only exist after enrichPlanWithSerper assigns
+      // actual URLs — see dedupeResourceUrls, applied there instead.
+      if (parsed.success) return parsed.data;
+      lastError = parsed.error;
     } catch (err) {
       lastError = err;
     }
   }
-  throw new Error("Groq structuring failed schema/duplicate-URL validation twice", {
+  throw new Error("Groq structuring failed schema validation twice", {
     cause: lastError,
   });
 }
@@ -268,6 +296,49 @@ function constructSearchUrl(resource: { type: string; title: string }, hobbyName
   return resource.type === "video"
     ? `https://www.youtube.com/results?search_query=${query}`
     : `https://www.google.com/search?q=${query}`;
+}
+
+// Real duplicates can only happen post-enrichment now (see
+// structureWithFallback) — e.g. two resources' Serper queries landing on
+// the same top result. Rather than retry the whole Groq call (burns tokens
+// for a problem that's cheap to fix locally), this just walks the plan
+// once and swaps any URL that's already been seen for its own
+// constructSearchUrl fallback, keeping first-seen as the "real" one.
+function dedupeResourceUrls(plan: AIPlanResponse, hobbyName: string): AIPlanResponse {
+  const seen = new Set<string>();
+
+  // enrichPlanWithSerper overwrites `title` with the real result's title
+  // (to keep title/link coherent) — so when two resources' searches land
+  // on the exact same real page, they end up with the same title too
+  // (title describes the destination, not the query that found it). That
+  // means a naive constructSearchUrl fallback can *also* collide for both.
+  // This keeps disambiguating with a counter until it lands on something
+  // unseen, rather than assuming one fallback pass is always enough.
+  function uniqueFallback(resource: { type: string; title: string }): string {
+    let url = constructSearchUrl(resource, hobbyName);
+    let disambiguator = 1;
+    while (seen.has(url)) {
+      disambiguator++;
+      url = constructSearchUrl({ ...resource, title: `${resource.title} ${disambiguator}` }, hobbyName);
+    }
+    return url;
+  }
+
+  return {
+    ...plan,
+    techniques: plan.techniques.map((technique) => ({
+      ...technique,
+      resources: technique.resources.map((resource) => {
+        if (!seen.has(resource.url)) {
+          seen.add(resource.url);
+          return resource;
+        }
+        const url = uniqueFallback(resource);
+        seen.add(url);
+        return { ...resource, url };
+      }),
+    })),
+  };
 }
 
 function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyPlan {
@@ -319,7 +390,8 @@ export async function POST(req: NextRequest) {
   try {
     const rawSkeleton = await structureWithFallback(buildSkeletonPrompt(input));
     const enrichedPlan = await enrichPlanWithSerper(rawSkeleton, input.hobbyName);
-    return NextResponse.json(toHobbyPlan(input, enrichedPlan), { status: 200 });
+    const dedupedPlan = dedupeResourceUrls(enrichedPlan, input.hobbyName);
+    return NextResponse.json(toHobbyPlan(input, dedupedPlan), { status: 200 });
   } catch (err) {
     console.error("[generate-plan] failed after all fallbacks", err);
     return NextResponse.json(

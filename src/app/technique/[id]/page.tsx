@@ -431,7 +431,7 @@ export default function TechniquePage() {
 
             <div className="flex flex-1 items-center justify-end gap-1">
               {/* Podcast quick-jump button */}
-              {needsAI && currentSlide.id !== "podcast" && (
+              {audio.length > 0 && currentSlide.id !== "podcast" && (
                 <button
                   type="button"
                   onClick={() => {

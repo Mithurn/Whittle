@@ -30,16 +30,12 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             />
           </p>
 
-          {/* Tail — two small circles + triangle pointing down */}
-          <div className="absolute -bottom-3 left-1/2 -translate-x-3">
-            <div className="w-4 h-4 rotate-45 bg-surface-1 border-r border-b border-border" />
-          </div>
-          <div className="absolute -bottom-6 left-1/2 translate-x-1">
-            <div className="w-2 h-2 rounded-full bg-surface-1 border border-border" />
-          </div>
-          <div className="absolute -bottom-9 left-1/2 translate-x-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-surface-1 border border-border" />
-          </div>
+          {/* Tail — a single diamond overlapping the bubble's bottom edge
+              (no gap, so it reads as one continuous shape) pointing down
+              toward the mascot. No border on the fill face — a border here
+              was barely visible on dark but reads as a distinct floating
+              outline against the light background. */}
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-surface-1 border-r border-b border-border" />
         </div>
 
         {/* Mascot */}

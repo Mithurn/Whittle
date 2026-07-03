@@ -154,6 +154,7 @@ function buildResourcesPrompt(curriculum: any): string {
   return (
     `Given the following learning curriculum:\n${JSON.stringify(curriculum, null, 2)}\n\n` +
     `For each technique, invent exactly 3 resources. Write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
+    `CRITICAL DEMO RULE: For the VERY FIRST technique in the curriculum, you MUST include exactly one "audio" resource (podcast). ` +
     `Write a one-line reason each resource fits this user. For the "url" field, write exactly "https://placeholder.com" — it will be filled in automatically later.`
   );
 }

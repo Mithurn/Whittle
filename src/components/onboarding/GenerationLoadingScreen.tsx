@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mascot } from "@/components/Mascot";
+import dynamic from "next/dynamic";
 import { TypingText } from "./TypingText";
 import type { GeneratePlanRequest } from "@/lib/schemas";
 import type { SkillLevel } from "@/types/domain";
+
+// See MascotWithSpeech.tsx — defers lottie-react out of the initial bundle.
+const Mascot = dynamic(() => import("@/components/Mascot").then((mod) => mod.Mascot), {
+  ssr: false,
+});
 
 // "a beginner" / "an intermediate" / "an advanced" — a lookup rather than a
 // generic a/an algorithm, since SkillLevel is a closed 3-value enum.

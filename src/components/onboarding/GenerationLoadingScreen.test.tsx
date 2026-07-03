@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GenerationLoadingScreen } from "./GenerationLoadingScreen";
@@ -34,9 +34,11 @@ describe("GenerationLoadingScreen", () => {
     vi.useRealTimers();
   });
 
-  it("renders the mascot in its thinking state", () => {
+  it("renders the mascot in its thinking state", async () => {
     render(<GenerationLoadingScreen request={REQUEST} />);
-    expect(mascotMock).toHaveBeenCalledWith(expect.objectContaining({ state: "thinking" }));
+    // Mascot now loads via next/dynamic (see GenerationLoadingScreen.tsx),
+    // so the mock isn't called on the very first synchronous render.
+    await waitFor(() => expect(mascotMock).toHaveBeenCalledWith(expect.objectContaining({ state: "thinking" })));
   });
 
   it("personalizes the first message with the hobby, and gets the a/an article right for the skill level", () => {

@@ -2,6 +2,8 @@
 
 import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "@/components/ProgressBar";
+import { SkippedTechniquesList } from "./SkippedTechniquesList";
+import { StartOverAction } from "./StartOverAction";
 import { getProgress } from "@/store/plan-store";
 import type { HobbyPlan } from "@/types/domain";
 
@@ -134,6 +136,15 @@ export function MascotCompanion({
             value={progress.percentage}
             maxValue={100}
           />
+        </div>
+
+        {/* Fills the previously-empty space under the progress bar in this
+            fixed-position rail. SkippedTechniquesList stays collapsed by
+            default (see that component) specifically because this rail
+            can't scroll to reach anything that overflows it. */}
+        <div className="flex w-[320px] flex-col gap-3">
+          <SkippedTechniquesList plan={plan} />
+          <StartOverAction />
         </div>
       </div>
     </>

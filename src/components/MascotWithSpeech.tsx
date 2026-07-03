@@ -1,7 +1,17 @@
 "use client";
 
-import { Mascot, type MascotState } from "@/components/Mascot";
+import dynamic from "next/dynamic";
+import type { MascotState } from "@/components/Mascot";
 import { SpeechBubble } from "@/components/SpeechBubble";
+
+// lottie-react (Mascot's own dependency) is a meaningfully-sized library
+// with no reason to sit in the initial bundle before anything's actually
+// rendered a mascot — this defers it to its own chunk, downloaded only once
+// a MascotWithSpeech is first about to mount. ssr:false since Mascot's
+// animation data is fetched client-side in an effect regardless.
+const Mascot = dynamic(() => import("@/components/Mascot").then((mod) => mod.Mascot), {
+  ssr: false,
+});
 
 export type MascotWithSpeechSize = "sm" | "md" | "lg";
 export type MascotWithSpeechPosition = "right" | "top" | "inline";

@@ -1,7 +1,13 @@
 "use client";
 
-import { Mascot } from "@/components/Mascot";
+import dynamic from "next/dynamic";
 import { TypingText } from "./TypingText";
+
+// See MascotWithSpeech.tsx — defers lottie-react out of the initial bundle
+// so the very first screen the user sees isn't blocked on it.
+const Mascot = dynamic(() => import("@/components/Mascot").then((mod) => mod.Mascot), {
+  ssr: false,
+});
 
 interface WelcomeScreenProps {
   onStart: () => void;

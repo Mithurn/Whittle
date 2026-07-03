@@ -7,6 +7,8 @@ import { RoadmapBackground } from "@/components/roadmap/RoadmapBackground";
 import { RoadmapPath } from "@/components/roadmap/RoadmapPath";
 import { MascotCompanion } from "@/components/roadmap/MascotCompanion";
 import { TechniqueModal } from "@/components/roadmap/TechniqueModal";
+import { SkippedTechniquesList } from "@/components/roadmap/SkippedTechniquesList";
+import { StartOverAction } from "@/components/roadmap/StartOverAction";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 export default function Home() {
@@ -75,6 +77,20 @@ export default function Home() {
             speech bubble) crowds into the roadmap's left edge. */}
         <div className="relative z-20 flex justify-center px-4 py-6 md:py-16 md:pl-[450px]">
           <RoadmapPath plan={currentPlan} isMobile={isMobile} onNodeClick={setSelectedTechniqueId} />
+        </div>
+
+        {/* Mobile only — desktop renders these inside the fixed rail via
+            MascotCompanion.tsx, using the space under the progress bar that
+            would otherwise sit empty. On mobile there's no such dead space
+            (one continuous scrolling column already), so these stay here,
+            below the main path. */}
+        <div className="relative z-20 md:hidden">
+          <div className="mx-auto w-full max-w-xl px-4 pb-6">
+            <SkippedTechniquesList plan={currentPlan} />
+          </div>
+          <div className="mx-auto w-full max-w-xl px-4 pb-10 text-center">
+            <StartOverAction />
+          </div>
         </div>
 
         <TechniqueModal

@@ -12,17 +12,14 @@ interface AnimatedItemProps {
 }
 
 const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }: AnimatedItemProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.5, triggerOnce: false });
   return (
     <motion.div
-      ref={ref}
       data-index={index}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.95, opacity: 0 }}
-      transition={{ duration: 0.3, delay }}
+      initial={{ scale: 0.95, opacity: 0, y: 10 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: delay, ease: "easeOut" }}
       className="mb-4 cursor-pointer"
     >
       {children}
@@ -140,8 +137,7 @@ export function AnimatedList<T>({
     <div className={`relative w-full ${className}`}>
       <div 
         ref={listRef} 
-        className={`max-h-[550px] overflow-y-auto px-2 py-4 ${!displayScrollbar ? '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden' : ''}`} 
-        onScroll={handleScroll}
+        className="flex flex-col gap-2 w-full px-2 py-4"
       >
         {items.map((item, index) => (
           <AnimatedItem
@@ -157,18 +153,6 @@ export function AnimatedList<T>({
           </AnimatedItem>
         ))}
       </div>
-      {showGradients && (
-        <>
-          <div 
-            className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background to-transparent pointer-events-none transition-opacity duration-300" 
-            style={{ opacity: topGradientOpacity }} 
-          />
-          <div 
-            className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none transition-opacity duration-300" 
-            style={{ opacity: bottomGradientOpacity }} 
-          />
-        </>
-      )}
     </div>
   );
 }

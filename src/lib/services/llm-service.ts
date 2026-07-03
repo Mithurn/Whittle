@@ -39,45 +39,66 @@ export function getTargetTechniqueCount(timeCommitment: string): number {
 // minItems/maxItems are both set to the exact per-request target count
 // (not the outer MIN/MAX_TECHNIQUES range) so the JSON-schema constraint
 // itself pushes toward that exact number, not just the prompt text.
-function buildPlanJsonSchema(targetCount: number) {
+function buildCurriculumJsonSchema(targetCount: number) {
   return {
-  type: "object",
-  properties: {
-    summary: { type: "string" },
-    techniques: {
-      type: "array",
-      minItems: targetCount,
-      maxItems: targetCount,
-      items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          description: { type: "string" },
-          rationale: { type: "string" },
-          resources: {
-            type: "array",
-            minItems: 3,
-            maxItems: 3,
-            items: {
-              type: "object",
-              properties: {
-                type: { type: "string", enum: ["video", "reading", "audio"] },
-                title: { type: "string" },
-                url: { type: "string" },
-                whyChosen: { type: "string" },
+    type: "object",
+    properties: {
+      summary: { type: "string" },
+      techniques: {
+        type: "array",
+        minItems: targetCount,
+        maxItems: targetCount,
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string" },
+            rationale: { type: "string" }
+          },
+          required: ["name", "description", "rationale"],
+          additionalProperties: false
+        }
+      }
+    },
+    required: ["summary", "techniques"],
+    additionalProperties: false
+  } as const;
+}
+
+function buildResourcesJsonSchema() {
+  return {
+    type: "object",
+    properties: {
+      techniques: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            resources: {
+              type: "array",
+              minItems: 3,
+              maxItems: 3,
+              items: {
+                type: "object",
+                properties: {
+                  type: { type: "string", enum: ["video", "reading", "audio"] },
+                  title: { type: "string" },
+                  url: { type: "string" },
+                  whyChosen: { type: "string" },
+                },
+                required: ["type", "title", "url", "whyChosen"],
+                additionalProperties: false,
               },
-              required: ["type", "title", "url", "whyChosen"],
-              additionalProperties: false,
             },
           },
+          required: ["name", "resources"],
+          additionalProperties: false,
         },
-        required: ["name", "description", "rationale", "resources"],
-        additionalProperties: false,
       },
     },
-  },
-  required: ["summary", "techniques"],
-  additionalProperties: false,
+    required: ["techniques"],
+    additionalProperties: false,
   } as const;
 }
 
@@ -106,11 +127,6 @@ const RESOURCE_MIX_RULE =
   `(either audio or another reading/article, whichever fits the technique better) — never audio-only for a ` +
   `technique that requires seeing physical form.`;
 
-// A generic "tailor to the stated skill level" instruction was tried first
-// and reproducibly failed — verified live: an "intermediate" chess request
-// still came back with "Opening Principles" and "Basic Tactical Motifs" as
-// the first two techniques, both textbook beginner content. Each level now
-// gets an explicit exclusion rule instead of a vague tailoring request.
 const SKILL_LEVEL_RULES: Record<SkillLevel, string> = {
   beginner:
     `The user is a complete beginner with this hobby — assume zero prior exposure. Start from the most ` +
@@ -125,14 +141,20 @@ const SKILL_LEVEL_RULES: Record<SkillLevel, string> = {
     `mastery-oriented techniques a comfortable practitioner would still need to refine.`,
 };
 
-function buildSkeletonPrompt(input: GeneratePlanRequest, targetCount: number): string {
+function buildCurriculumPrompt(input: GeneratePlanRequest, targetCount: number): string {
   return (
     `${describeInput(input)}\n\n` +
-    `Create a learning plan with exactly ${targetCount} techniques for this hobby — not a range, exactly ${targetCount}. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
+    `Create a learning plan curriculum with exactly ${targetCount} techniques for this hobby — not a range, exactly ${targetCount}. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `${SKILL_LEVEL_RULES[input.level]} Tailor the plan to the stated goal and what they already know. ` +
-    `For each technique's resources, write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
-    `Write a one-line reason each resource fits this user. For the "url" field, write exactly "https://placeholder.com" — it will be filled in automatically later. ` +
     `Also include a one-line summary tying the plan to their goal.`
+  );
+}
+
+function buildResourcesPrompt(curriculum: any): string {
+  return (
+    `Given the following learning curriculum:\n${JSON.stringify(curriculum, null, 2)}\n\n` +
+    `For each technique, invent exactly 3 resources. Write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
+    `Write a one-line reason each resource fits this user. For the "url" field, write exactly "https://placeholder.com" — it will be filled in automatically later.`
   );
 }
 
@@ -141,7 +163,8 @@ async function callChatJsonSchema(
   apiKey: string,
   model: string,
   userContent: string,
-  targetCount: number
+  schema: any,
+  schemaName: string
 ): Promise<unknown> {
   const res = await fetch(endpoint, {
     method: "POST",
@@ -157,7 +180,7 @@ async function callChatJsonSchema(
       ],
       response_format: {
         type: "json_schema",
-        json_schema: { name: "hobby_plan", strict: true, schema: buildPlanJsonSchema(targetCount) },
+        json_schema: { name: schemaName, strict: true, schema },
       },
     }),
   });
@@ -167,7 +190,7 @@ async function callChatJsonSchema(
   }
 
   const data = await res.json();
-  devLog(endpoint, data.usage);
+  devLog(`${schemaName} on ${endpoint}`, data.usage);
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
     throw new Error(`${endpoint} returned no message content`);
@@ -175,46 +198,71 @@ async function callChatJsonSchema(
   return JSON.parse(content);
 }
 
-async function callGroq(userContent: string, targetCount: number): Promise<unknown> {
+async function callGroq(userContent: string, schema: any, schemaName: string): Promise<unknown> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
-  return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent, targetCount);
+  return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent, schema, schemaName);
 }
 
-// Invents the full plan skeleton — technique names, descriptions, rationale,
-// resource titles/types — with every resource url set to a literal
-// placeholder (see buildSkeletonPrompt); real URLs are filled in later by
-// search-service's enrichPlanWithSerper. Retries once on schema-validation
-// failure before being treated as a failure (transient malformed JSON is
-// common enough with any LLM to be worth one retry before giving up).
-//
-// Zod validation below still accepts the outer MIN_TECHNIQUES-MAX_TECHNIQUES
-// range rather than requiring exactly targetCount — deliberately: the
-// prompt text and the JSON schema's minItems/maxItems both push the model
-// toward the exact count, but LLMs aren't perfectly reliable at hard count
-// constraints, and rejecting a near-miss (e.g. 5 techniques when 6 were
-// asked for) would trade a real robustness cost for a validation nicety.
 export async function structureWithFallback(input: GeneratePlanRequest): Promise<AIPlanResponse> {
   const targetCount = getTargetTechniqueCount(input.timeCommitment);
-  const userContent = buildSkeletonPrompt(input, targetCount);
-  let lastError: unknown;
+  
+  // Step 1: Generate Curriculum (The "What")
+  let curriculum: any;
+  let curriculumError: unknown;
+  const curriculumPrompt = buildCurriculumPrompt(input, targetCount);
+  const curriculumSchema = buildCurriculumJsonSchema(targetCount);
+  
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await callGroq(userContent, targetCount);
-      const parsed = AIPlanResponseSchema.safeParse(raw);
-      // No duplicate-URL check here anymore — at this stage every resource's
-      // url is uniformly the "https://placeholder.com" literal (see
-      // buildSkeletonPrompt), so a same-value check would just compare
-      // placeholders against each other and never find a real collision.
-      // Real duplicates can only exist after enrichPlanWithSerper assigns
-      // actual URLs — see transformer.ts's dedupeResourceUrls instead.
-      if (parsed.success) return parsed.data;
-      lastError = parsed.error;
+      curriculum = await callGroq(curriculumPrompt, curriculumSchema, "hobby_curriculum");
+      if (curriculum && curriculum.techniques && curriculum.techniques.length > 0) break;
     } catch (err) {
-      lastError = err;
+      curriculumError = err;
     }
   }
-  throw new Error("Groq structuring failed schema validation twice", {
-    cause: lastError,
+  
+  if (!curriculum) {
+    throw new Error("Groq curriculum generation failed", { cause: curriculumError });
+  }
+
+  // Step 2: Generate Resources (The "Where" & "Why")
+  let resourcesResp: any;
+  let resourcesError: unknown;
+  const resourcesPrompt = buildResourcesPrompt(curriculum);
+  const resourcesSchema = buildResourcesJsonSchema();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      resourcesResp = await callGroq(resourcesPrompt, resourcesSchema, "hobby_resources");
+      if (resourcesResp && resourcesResp.techniques) break;
+    } catch (err) {
+      resourcesError = err;
+    }
+  }
+
+  if (!resourcesResp) {
+    throw new Error("Groq resources generation failed", { cause: resourcesError });
+  }
+
+  // Step 3: Merge and Enrich
+  const mergedTechniques = curriculum.techniques.map((tech: any) => {
+    // Find the matching resources for this technique name
+    const resourceMatch = resourcesResp.techniques.find((r: any) => r.name === tech.name);
+    return {
+      ...tech,
+      resources: resourceMatch ? resourceMatch.resources : []
+    };
   });
+
+  const finalPayload = {
+    summary: curriculum.summary,
+    techniques: mergedTechniques
+  };
+
+  const parsed = AIPlanResponseSchema.safeParse(finalPayload);
+  
+  if (parsed.success) return parsed.data;
+  
+  throw new Error("Merged result failed schema validation", { cause: parsed.error });
 }

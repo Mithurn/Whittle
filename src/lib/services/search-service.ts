@@ -160,11 +160,12 @@ export async function enrichPlanWithSerper(
           }
           readingCount++;
         } else if (res.type === "audio") {
-          if (!audioResults) audioResults = await callSerper(`${technique.name} ${hobbyName} podcast episode`, "search");
+          if (!audioResults) audioResults = await callSerper(`${technique.name} ${hobbyName} podcast (site:open.spotify.com/episode OR site:podcasts.apple.com OR site:soundcloud.com)`, "search");
           if (audioResults && audioResults.length > audioCount) {
             finalUrl = audioResults[audioCount].url;
             finalTitle = audioResults[audioCount].title;
           } else {
+            // Fallback to youtube search if no embeddable podcast found
             finalUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(technique.name + " " + hobbyName + " podcast audio")}`;
           }
           audioCount++;

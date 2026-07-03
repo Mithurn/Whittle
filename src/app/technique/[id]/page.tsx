@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus, Headphones } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Lottie from "lottie-react";
 import { usePlanStore } from "@/store/plan-store";
@@ -14,6 +14,7 @@ import { ProsConsList } from "@/components/technique/ProsConsList";
 import { SummaryTable } from "@/components/technique/SummaryTable";
 import { HowItWorksTimeline } from "@/components/technique/HowItWorksTimeline";
 import { NotesDrawer } from "@/components/technique/NotesDrawer";
+import { PodcastMode } from "@/components/technique/PodcastMode";
 
 import thinkingAnimation from "../../../../maskot/thinking.json";
 
@@ -42,7 +43,7 @@ export default function TechniquePage() {
   const [direction, setDirection] = useState(1);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
 
-  const { video, reading } = useMemo(() => {
+  const { video, reading, audio } = useMemo(() => {
     return technique ? categorizeResources(technique.resources) : { video: [], reading: [], audio: [] };
   }, [technique]);
 
@@ -128,6 +129,11 @@ export default function TechniquePage() {
     slides.push({ id: "prosCons", title: "Pros & Cons", icon: CheckCircle });
     slides.push({ id: "summary", title: "Summary", icon: TableIcon });
   }
+  
+  if (audio.length > 0) {
+    slides.push({ id: "podcast", title: "Podcast", icon: Headphones });
+  }
+  
   slides.push({ id: "master", title: "Master", icon: Flame });
 
   const currentSlide = slides[slideIndex];
@@ -150,7 +156,7 @@ export default function TechniquePage() {
   }
 
   // JIT Loading State for AI-generated slides (Slide 3+)
-  const needsAI = ["howItWorks", "prosCons", "summary"].includes(currentSlide.id);
+  const needsAI = ["howItWorks", "prosCons", "summary", "podcast"].includes(currentSlide.id);
   const isAILoading = needsAI && (!technique.lesson || fetchState === "loading");
   const isAIError = needsAI && fetchState === "error";
 
@@ -264,7 +270,7 @@ export default function TechniquePage() {
 
             {!isAILoading && !isAIError && technique.lesson && (
               <>
-                {currentSlide.id === "howItWorks" && technique.lesson && (
+                {currentSlide.id === "howItWorks" && (
                   <div className="flex flex-col gap-6">
                     {renderSlideHeader("How it Works", true)}
                     {typeof technique.lesson.howItWorks === "string" ? (
@@ -284,19 +290,25 @@ export default function TechniquePage() {
                   <div className="flex flex-col gap-6">
                     {renderSlideHeader("Pros & Cons", true)}
                     <ProsConsList 
-                      advantages={technique.lesson.prosCons.advantages} 
-                      disadvantages={technique.lesson.prosCons.disadvantages} 
+                      advantages={technique.lesson.prosCons?.advantages || []} 
+                      disadvantages={technique.lesson.prosCons?.disadvantages || []} 
                     />
                   </div>
                 )}
 
                 {currentSlide.id === "summary" && (
                   <div className="flex flex-col gap-6">
-                    {renderSlideHeader("Summary", true)}
-                    <SummaryTable 
-                      headers={technique.lesson.summaryTable.headers}
-                      rows={technique.lesson.summaryTable.rows}
+                    {renderSlideHeader("Key Takeaways", true)}
+                    <SummaryTable
+                      headers={technique.lesson.summaryTable?.headers || []}
+                      rows={technique.lesson.summaryTable?.rows || []}
                     />
+                  </div>
+                )}
+
+                {currentSlide.id === "podcast" && audio.length > 0 && (
+                  <div className="flex flex-col gap-6 w-full h-full pb-8">
+                    <PodcastMode audioResource={audio[0]} />
                   </div>
                 )}
               </>
@@ -412,12 +424,31 @@ export default function TechniquePage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 justify-center">
+            <div className="flex items-center gap-2 justify-center flex-1">
               {currentSlide.icon && <currentSlide.icon size={16} className="text-mascot-body" />}
               <span className="font-label text-sm font-semibold text-text-primary">{currentSlide.title}</span>
             </div>
 
             <div className="flex flex-1 items-center justify-end gap-1">
+              {/* Podcast quick-jump button */}
+              {needsAI && currentSlide.id !== "podcast" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const podcastIdx = slides.findIndex(s => s.id === "podcast");
+                    if (podcastIdx !== -1) {
+                      setDirection(podcastIdx > slideIndex ? 1 : -1);
+                      setSlideIndex(podcastIdx);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  title="Go to Podcast Mode"
+                  className="flex items-center justify-center w-10 h-10 rounded-full text-primary hover:bg-primary/10 transition-colors mr-1 sm:mr-2"
+                >
+                  <Headphones size={18} />
+                </button>
+              )}
+              
               <button
                 type="button"
                 onClick={() => hasNext && paginate(1)}

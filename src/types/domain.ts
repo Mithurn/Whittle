@@ -24,6 +24,25 @@ export interface NoteEntry {
   createdAt: string; // ISO date string
 }
 
+export interface LessonContent {
+  intro: string;
+  howItWorks: {
+    overview: string;
+    steps: Array<{
+      title: string;
+      text: string;
+    }>;
+  };
+  prosCons: {
+    advantages: string[];
+    disadvantages: string[];
+  };
+  summaryTable: {
+    headers: string[];
+    rows: string[][];
+  };
+}
+
 export interface Technique {
   id: string;
   name: string; // e.g. "Forking"
@@ -33,6 +52,7 @@ export interface Technique {
   status: TechniqueStatus;
   order: number;
   notes: NoteEntry[]; // user-added notes, most-recent-last; empty until they add one
+  lesson?: LessonContent; // Cached structured lesson (JIT generated)
 }
 
 export interface HobbyPlan {

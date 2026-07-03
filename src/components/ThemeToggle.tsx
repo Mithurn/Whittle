@@ -23,7 +23,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     // Reserve the exact footprint so nothing shifts once it mounts.
-    return <div className="fixed top-4 right-4 z-30 size-11 md:top-6 md:right-6" aria-hidden="true" />;
+    return <div className="fixed top-4 right-4 z-50 size-11 md:top-6 md:right-6" aria-hidden="true" />;
   }
 
   const isDark = resolvedTheme === "dark";
@@ -33,7 +33,7 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="fixed top-4 right-4 z-30 flex size-11 items-center justify-center rounded-full border border-border bg-surface-1 text-text-primary shadow-sm transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body md:top-6 md:right-6"
+      className="fixed top-4 right-4 z-50 flex size-11 items-center justify-center rounded-full border border-border bg-surface-1 text-text-primary shadow-sm transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body md:top-6 md:right-6"
     >
       <Sun
         size={18}

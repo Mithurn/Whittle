@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { HobbyPlan, Technique, TechniqueStatus } from "@/types/domain";
+import type { HobbyPlan, Technique, TechniqueStatus, LessonContent } from "@/types/domain";
 
 // v0 -> v1: Technique.notes changed from a plain string to a structured
 // NoteEntry[] (see decisions.md #16). Any plan already sitting in a
@@ -43,6 +43,7 @@ interface PlanState {
   celebratingTechniqueId: string | null;
   setPlan: (plan: HobbyPlan) => void;
   updateTechniqueStatus: (techniqueId: string, status: TechniqueStatus) => void;
+  setTechniqueLesson: (techniqueId: string, lesson: LessonContent) => void;
   addTechniqueNote: (techniqueId: string, note: { title: string; description: string }) => void;
   removeTechniqueNote: (techniqueId: string, noteId: string) => void;
   startOver: () => void;
@@ -66,6 +67,19 @@ export const usePlanStore = create<PlanState>()(
               ...state.currentPlan,
               techniques: state.currentPlan.techniques.map((technique) =>
                 technique.id === techniqueId ? { ...technique, status } : technique
+              ),
+            },
+          };
+        }),
+        
+      setTechniqueLesson: (techniqueId, lesson) =>
+        set((state) => {
+          if (!state.currentPlan) return state;
+          return {
+            currentPlan: {
+              ...state.currentPlan,
+              techniques: state.currentPlan.techniques.map((technique) =>
+                technique.id === techniqueId ? { ...technique, lesson } : technique
               ),
             },
           };

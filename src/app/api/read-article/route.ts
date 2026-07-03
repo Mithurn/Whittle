@@ -61,60 +61,55 @@ export async function GET(req: NextRequest) {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  
+  let rawContent = "";
   try {
     const res = await fetch(`${JINA_READER_ENDPOINT}${parsed.toString()}`, {
       signal: controller.signal,
       headers: { Accept: "text/plain" },
     });
-    if (!res.ok) {
-      return NextResponse.json({ error: "Could not fetch article" }, { status: 502 });
+    if (res.ok) {
+      const text = stripJinaMetadataHeader(await res.text());
+      if (text.trim()) {
+        const BLOCK_SIGNALS = [
+          "blocked by network security",
+          "checking if you are human",
+          "enable javascript and cookies",
+          "access to this page has been denied",
+          "please verify you are a human",
+          "captcha",
+        ];
+        const lowerContent = text.toLowerCase();
+        if (!BLOCK_SIGNALS.some((signal) => lowerContent.includes(signal))) {
+          rawContent = text;
+        } else {
+          console.warn("[read-article] Source blocked Jina (Bot Protection). Falling back to AI knowledge base.");
+        }
+      }
+    } else {
+       console.warn(`[read-article] Jina returned ${res.status}. Falling back to AI knowledge base.`);
     }
-    const rawContent = stripJinaMetadataHeader(await res.text());
-    if (!rawContent.trim()) {
-      return NextResponse.json({ error: "Article was empty" }, { status: 502 });
-    }
-
-    // Detect bot-block pages (Reddit, Cloudflare, etc.) — Jina fetches
-    // successfully (HTTP 200) but the body is a wall telling us we're blocked.
-    // Return a 502 so the UI falls back to an external-link card rather than
-    // rendering the block message as if it were real article content.
-    const BLOCK_SIGNALS = [
-      "blocked by network security",
-      "checking if you are human",
-      "enable javascript and cookies",
-      "access to this page has been denied",
-      "please verify you are a human",
-      "captcha",
-    ];
-    const lowerContent = rawContent.toLowerCase();
-    if (BLOCK_SIGNALS.some((signal) => lowerContent.includes(signal))) {
-      return NextResponse.json({ error: "Article could not be accessed" }, { status: 502 });
-    }
-
-    // Optionally condense the article with Groq for this user's hobby + skill level.
-    // hobbyName and level are optional query params — if absent (old clients, tests),
-    // we skip condensing and return the raw article. condenseArticle returns null on
-    // any failure, and we fall back to raw — never worse than before.
-    const hobbyName = req.nextUrl.searchParams.get("hobbyName") ?? undefined;
-    const rawLevel = req.nextUrl.searchParams.get("level") ?? undefined;
-    const level = rawLevel && VALID_SKILL_LEVELS.has(rawLevel) ? (rawLevel as SkillLevel) : undefined;
-
-    let content = rawContent;
-    if (hobbyName && level) {
-      const condensed = await condenseArticle(rawContent, { hobbyName, level });
-      if (condensed) content = condensed;
-    }
-
-    return NextResponse.json({ content });
   } catch (err) {
-    // Timeout (via the abort above), network failure, or a source blocking
-    // the fetch (paywall, robots.txt) — r.jina.ai is a free, no-SLA
-    // third-party service, so this is expected, normal behavior to handle,
-    // not an edge case. The caller (TechniqueContent) falls back to opening
-    // the real URL directly on any non-200 response.
-    console.error("[read-article] failed", err);
-    return NextResponse.json({ error: "Could not fetch article" }, { status: 502 });
+    console.warn("[read-article] Jina fetch failed or timed out. Falling back to AI knowledge base.", err);
   } finally {
     clearTimeout(timeout);
   }
+
+  // Generate the structured JSON lesson. If rawContent is empty, the article-service
+  // uses the AI's internal knowledge base to generate the lesson.
+  const hobbyName = req.nextUrl.searchParams.get("hobbyName");
+  const rawLevel = req.nextUrl.searchParams.get("level");
+  const techniqueName = req.nextUrl.searchParams.get("techniqueName");
+  const level = rawLevel && VALID_SKILL_LEVELS.has(rawLevel) ? (rawLevel as SkillLevel) : undefined;
+
+  if (!hobbyName || !level || !techniqueName) {
+    return NextResponse.json({ error: "Missing lesson generation context params" }, { status: 400 });
+  }
+
+  const lesson = await condenseArticle(rawContent, { hobbyName, level, techniqueName });
+  if (!lesson) {
+    return NextResponse.json({ error: "Failed to generate structured lesson" }, { status: 500 });
+  }
+  
+  return NextResponse.json(lesson);
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Edit3 } from "lucide-react";
 import type { NoteEntry } from "@/types/domain";
 
 interface NotesDrawerProps {
@@ -10,6 +10,7 @@ interface NotesDrawerProps {
   notes: NoteEntry[];
   onClose: () => void;
   onAdd: (note: { title: string; description: string }) => void;
+  onUpdate: (noteId: string, note: { title: string; description: string }) => void;
   onRemove: (noteId: string) => void;
 }
 
@@ -17,8 +18,9 @@ interface NotesDrawerProps {
 // enough to read comfortably without fully hiding the content the notes
 // are about. A plain transform-based panel (not a nested Base UI Drawer)
 // keeps this independent of whatever tab/section is active underneath.
-export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDrawerProps) {
-  const [adding, setAdding] = useState(false);
+export function NotesDrawer({ isOpen, notes, onClose, onAdd, onUpdate, onRemove }: NotesDrawerProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
@@ -26,10 +28,15 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDr
   function handleSave() {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
-    onAdd({ title: trimmedTitle, description: description.trim() });
+    if (editingNoteId) {
+      onUpdate(editingNoteId, { title: trimmedTitle, description: description.trim() });
+    } else {
+      onAdd({ title: trimmedTitle, description: description.trim() });
+    }
     setTitle("");
     setDescription("");
-    setAdding(false);
+    setIsFormOpen(false);
+    setEditingNoteId(null);
   }
 
   const openNote = notes.find((n) => n.id === openNoteId) ?? null;
@@ -66,7 +73,7 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDr
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {adding ? (
+          {isFormOpen ? (
             <div className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-surface-2 p-4">
               <input
                 type="text"
@@ -89,7 +96,8 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDr
                 <button
                   type="button"
                   onClick={() => {
-                    setAdding(false);
+                    setIsFormOpen(false);
+                    setEditingNoteId(null);
                     setTitle("");
                     setDescription("");
                   }}
@@ -112,7 +120,7 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDr
           ) : (
             <button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => setIsFormOpen(true)}
               tabIndex={isOpen ? 0 : -1}
               className="mb-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border font-label text-sm font-semibold text-primary transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
             >
@@ -160,17 +168,33 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onRemove }: NotesDr
                   {openNote.description || "No description added."}
                 </Dialog.Description>
                 <div className="mt-6 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onRemove(openNote.id);
-                      setOpenNoteId(null);
-                    }}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenNoteId(null);
+                        setIsFormOpen(true);
+                        setEditingNoteId(openNote.id);
+                        setTitle(openNote.title);
+                        setDescription(openNote.description);
+                      }}
+                      className="flex min-h-11 items-center gap-1.5 rounded-md px-2 font-label text-sm font-medium text-text-muted transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
+                    >
+                      <Edit3 size={15} aria-hidden="true" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemove(openNote.id);
+                        setOpenNoteId(null);
+                      }}
                     className="flex min-h-11 items-center gap-1.5 rounded-md px-2 font-label text-sm font-medium text-destructive transition-opacity duration-150 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
                   >
-                    <Trash2 size={15} aria-hidden="true" />
-                    Delete
-                  </button>
+                      <Trash2 size={15} aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setOpenNoteId(null)}

@@ -24,6 +24,7 @@ export default function TechniquePage() {
   const updateTechniqueStatus = usePlanStore((s) => s.updateTechniqueStatus);
   const setTechniqueLesson = usePlanStore((s) => s.setTechniqueLesson);
   const addTechniqueNote = usePlanStore((s) => s.addTechniqueNote);
+  const updateTechniqueNote = usePlanStore((s) => s.updateTechniqueNote);
   const removeTechniqueNote = usePlanStore((s) => s.removeTechniqueNote);
   const triggerCelebration = usePlanStore((s) => s.triggerCelebration);
 
@@ -445,9 +446,10 @@ export default function TechniquePage() {
       
       <NotesDrawer
         isOpen={isNotesOpen}
-        notes={technique.notes}
+        notes={technique.notes || []}
         onClose={() => setIsNotesOpen(false)}
         onAdd={(note) => addTechniqueNote(technique.id, note)}
+        onUpdate={(noteId, note) => updateTechniqueNote(technique.id, noteId, note)}
         onRemove={(noteId) => removeTechniqueNote(technique.id, noteId)}
       />
     </div>

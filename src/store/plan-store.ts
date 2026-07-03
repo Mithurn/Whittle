@@ -45,6 +45,7 @@ interface PlanState {
   updateTechniqueStatus: (techniqueId: string, status: TechniqueStatus) => void;
   setTechniqueLesson: (techniqueId: string, lesson: LessonContent) => void;
   addTechniqueNote: (techniqueId: string, note: { title: string; description: string }) => void;
+  updateTechniqueNote: (techniqueId: string, noteId: string, note: { title: string; description: string }) => void;
   removeTechniqueNote: (techniqueId: string, noteId: string) => void;
   startOver: () => void;
   triggerCelebration: (techniqueId: string) => void;
@@ -99,6 +100,26 @@ export const usePlanStore = create<PlanState>()(
               ...state.currentPlan,
               techniques: state.currentPlan.techniques.map((technique) =>
                 technique.id === techniqueId ? { ...technique, notes: [...technique.notes, entry] } : technique
+              ),
+            },
+          };
+        }),
+
+      updateTechniqueNote: (techniqueId, noteId, note) =>
+        set((state) => {
+          if (!state.currentPlan) return state;
+          return {
+            currentPlan: {
+              ...state.currentPlan,
+              techniques: state.currentPlan.techniques.map((technique) =>
+                technique.id === techniqueId
+                  ? {
+                      ...technique,
+                      notes: technique.notes.map((n) =>
+                        n.id === noteId ? { ...n, title: note.title, description: note.description } : n
+                      ),
+                    }
+                  : technique
               ),
             },
           };

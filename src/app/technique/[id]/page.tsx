@@ -121,7 +121,7 @@ export default function TechniquePage() {
     );
   }
 
-  const slides = [];
+  const slides: { id: string; title: string; icon: any }[] = [];
   slides.push({ id: "intro", title: "Introduction", icon: Info });
   if (video.length > 0) slides.push({ id: "video", title: "Watch & Learn", icon: Play });
   if (reading.length > 0) {

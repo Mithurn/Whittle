@@ -74,6 +74,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Article was empty" }, { status: 502 });
     }
 
+    // Detect bot-block pages (Reddit, Cloudflare, etc.) — Jina fetches
+    // successfully (HTTP 200) but the body is a wall telling us we're blocked.
+    // Return a 502 so the UI falls back to an external-link card rather than
+    // rendering the block message as if it were real article content.
+    const BLOCK_SIGNALS = [
+      "blocked by network security",
+      "checking if you are human",
+      "enable javascript and cookies",
+      "access to this page has been denied",
+      "please verify you are a human",
+      "captcha",
+    ];
+    const lowerContent = rawContent.toLowerCase();
+    if (BLOCK_SIGNALS.some((signal) => lowerContent.includes(signal))) {
+      return NextResponse.json({ error: "Article could not be accessed" }, { status: 502 });
+    }
+
     // Optionally condense the article with Groq for this user's hobby + skill level.
     // hobbyName and level are optional query params — if absent (old clients, tests),
     // we skip condensing and return the raw article. condenseArticle returns null on

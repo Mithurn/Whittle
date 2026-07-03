@@ -68,12 +68,41 @@ describe("TechniqueModal", () => {
     expect(screen.getByText("The Pin Theory")).toBeInTheDocument();
   });
 
-  it("links each resource directly to its real URL, opened in a new tab", () => {
+  it("links a non-embeddable resource directly to its real URL, opened in a new tab", () => {
     render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-    const link = screen.getByText("Mastering the Fork").closest("a");
-    expect(link).toHaveAttribute("href", "https://youtube.com/watch?v=abc");
+    const link = screen.getByText("The Pin Theory").closest("a");
+    expect(link).toHaveAttribute("href", "https://chess.com/pin-theory");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("embeds a YouTube resource natively instead of linking out", () => {
+    render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+    expect(screen.getByText("Mastering the Fork").closest("a")).not.toBeInTheDocument();
+    const iframe = screen.getByTitle("Mastering the Fork");
+    expect(iframe.tagName).toBe("IFRAME");
+    expect(iframe).toHaveAttribute("src", "https://www.youtube.com/embed/abc");
+  });
+
+  it("falls back to an external link when a video-typed resource isn't actually a YouTube URL", () => {
+    const nonYouTubeVideoTechnique: Technique = {
+      ...technique,
+      resources: [
+        {
+          id: "r2",
+          type: "video",
+          title: "Some Other Video Host",
+          url: "https://vimeo.com/12345",
+          sourceName: "Vimeo",
+          whyChosen: "x",
+        },
+      ],
+    };
+    render(
+      <TechniqueModal technique={nonYouTubeVideoTechnique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />
+    );
+    const link = screen.getByText("Some Other Video Host").closest("a");
+    expect(link).toHaveAttribute("href", "https://vimeo.com/12345");
   });
 
   it("marks the technique mastered, closes, and fires onMastered when the primary CTA is used", async () => {

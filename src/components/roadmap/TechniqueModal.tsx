@@ -4,6 +4,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Drawer } from "@base-ui/react/drawer";
 import { Play, BookOpen, Headphones, Flame, type LucideIcon } from "lucide-react";
 import { usePlanStore } from "@/store/plan-store";
+import { getYouTubeEmbedUrl } from "@/lib/youtube";
 import type { Technique, Resource, ResourceType } from "@/types/domain";
 
 interface TechniqueModalProps {
@@ -125,13 +126,20 @@ export function TechniqueModal({ technique, isMobile, onClose, onMastered }: Tec
 
 // Cards are a vertical stack, not a literal carousel — matches how the
 // content actually reads at 1-3 items and keeps keyboard/scroll navigation
-// simple. Clicking opens the resource directly: title, source, and
-// whyChosen are already fully visible on the card, so a nested preview-
-// before-leaving overlay would just be an overlay inside this one.
+// simple.
 function ResourceList({ resources }: { resources: Resource[] }) {
   return (
     <ul className="flex flex-col gap-3">
       {resources.map((resource) => {
+        // Checked on the resolved URL itself, not resource.type — a
+        // "podcast" search for an audio-typed resource has been observed
+        // live landing on a YouTube video page (see search-service.ts),
+        // so type alone can't be trusted to mean "not embeddable".
+        const embedUrl = getYouTubeEmbedUrl(resource.url);
+        if (embedUrl) {
+          return <EmbeddedVideoCard key={resource.id} resource={resource} embedUrl={embedUrl} />;
+        }
+
         const Icon = RESOURCE_ICONS[resource.type];
         return (
           <li key={resource.id}>
@@ -158,6 +166,41 @@ function ResourceList({ resources }: { resources: Resource[] }) {
         );
       })}
     </ul>
+  );
+}
+
+// Plays natively in-app instead of sending the user to YouTube — the
+// title/source/whyChosen header stays identical to the external-link card
+// above it, just with a real <iframe> player underneath instead of the
+// whole card being a link out.
+function EmbeddedVideoCard({ resource, embedUrl }: { resource: Resource; embedUrl: string }) {
+  return (
+    <li className="rounded-lg border border-border bg-surface-2 p-3">
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary">
+          <Play size={18} aria-hidden="true" />
+        </span>
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-sans text-sm font-semibold text-text-primary">{resource.title}</span>
+            <span className="shrink-0 rounded-full bg-surface-1 px-2 py-0.5 font-label text-[10px] font-semibold tracking-wide text-text-muted uppercase">
+              {resource.sourceName}
+            </span>
+          </span>
+          <span className="font-sans text-xs text-text-muted">{resource.whyChosen}</span>
+        </span>
+      </div>
+      <div className="mt-3 aspect-video w-full overflow-hidden rounded-md bg-black">
+        <iframe
+          src={embedUrl}
+          title={resource.title}
+          className="size-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+    </li>
   );
 }
 

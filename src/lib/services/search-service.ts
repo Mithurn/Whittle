@@ -80,7 +80,12 @@ export async function enrichPlanWithSerper(plan: AIPlanResponse, hobbyName: stri
         let finalTitle = res.title;
 
         if (res.type === "video") {
-          if (!videoResults) videoResults = await callSerper(`${technique.name} ${hobbyName} tutorial`, "videos");
+          // Constrained to YouTube specifically (not just Serper's generic
+          // "videos" search, which can surface other hosts) so the result
+          // is guaranteed embeddable via getYouTubeEmbedUrl in the UI —
+          // never a video-typed resource the player can't actually play in-app.
+          if (!videoResults)
+            videoResults = await callSerper(`${technique.name} ${hobbyName} tutorial site:youtube.com`, "videos");
           if (videoResults && videoResults.length > videoCount) {
             finalUrl = videoResults[videoCount].url;
             finalTitle = videoResults[videoCount].title;

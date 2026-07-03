@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TechniqueModal } from "./TechniqueModal";
 import { usePlanStore } from "@/store/plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";
@@ -26,6 +26,14 @@ const technique: Technique = {
       url: "https://chess.com/pin-theory",
       sourceName: "Chess.com",
       whyChosen: "Visual breakdown of alignment tactics.",
+    },
+    {
+      id: "r2",
+      type: "audio",
+      title: "Tactics Podcast Ep. 3",
+      url: "https://podcasts.example.com/ep3",
+      sourceName: "Example Podcasts",
+      whyChosen: "Discusses forks in a real-game context.",
     },
   ],
   status: "not_started",
@@ -68,12 +76,18 @@ describe("TechniqueModal", () => {
     expect(screen.getByText("The Pin Theory")).toBeInTheDocument();
   });
 
-  it("links a non-embeddable resource directly to its real URL, opened in a new tab", () => {
+  it("links a non-embeddable, non-reading resource directly to its real URL, opened in a new tab", () => {
     render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
-    const link = screen.getByText("The Pin Theory").closest("a");
-    expect(link).toHaveAttribute("href", "https://chess.com/pin-theory");
+    const link = screen.getByText("Tactics Podcast Ep. 3").closest("a");
+    expect(link).toHaveAttribute("href", "https://podcasts.example.com/ep3");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("renders a reading resource as a button, not a link out", () => {
+    render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+    expect(screen.getByText("The Pin Theory").closest("a")).not.toBeInTheDocument();
+    expect(screen.getByText("The Pin Theory").closest("button")).toBeInTheDocument();
   });
 
   it("embeds a YouTube resource natively instead of linking out", () => {
@@ -137,5 +151,64 @@ describe("TechniqueModal", () => {
     expect(
       screen.queryByText("Forks and pins are the bread and butter of any master's toolkit.")
     ).not.toBeInTheDocument();
+  });
+
+  describe("reader mode", () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it("fetches and shows the article in-place, with a working back button", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ content: "# The Pin\n\nA real pinned piece can't move." }),
+      }) as unknown as typeof fetch;
+
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await userEvent.click(screen.getByText("The Pin Theory"));
+
+      expect(await screen.findByText("A real pinned piece can't move.")).toBeInTheDocument();
+      // Swapped in-place — description/resource list are gone, not stacked under it.
+      expect(screen.queryByText("A tactic that attacks two pieces at once.")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: /back to technique/i }));
+      expect(screen.getByText("A tactic that attacks two pieces at once.")).toBeInTheDocument();
+      expect(screen.queryByText("A real pinned piece can't move.")).not.toBeInTheDocument();
+    });
+
+    it("does not refetch when reopening the same resource after going back", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ content: "Cached content." }),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await userEvent.click(screen.getByText("The Pin Theory"));
+      await screen.findByText("Cached content.");
+      await userEvent.click(screen.getByRole("button", { name: /back to technique/i }));
+      await userEvent.click(screen.getByText("The Pin Theory"));
+
+      expect(await screen.findByText("Cached content.")).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to opening the real URL when the fetch fails, without leaving a broken reader view", async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: false }) as unknown as typeof fetch;
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+      render(<TechniqueModal technique={technique} isMobile={false} onClose={vi.fn()} onMastered={vi.fn()} />);
+      await userEvent.click(screen.getByText("The Pin Theory"));
+
+      await vi.waitFor(() => {
+        expect(openSpy).toHaveBeenCalledWith("https://chess.com/pin-theory", "_blank", "noopener,noreferrer");
+      });
+      // Back to the normal technique view, not stuck showing a broken reader pane.
+      expect(screen.getByText("A tactic that attacks two pieces at once.")).toBeInTheDocument();
+
+      openSpy.mockRestore();
+    });
   });
 });

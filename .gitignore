@@ -36,3 +36,6 @@ next-env.d.ts
 # internal planning docs (not part of the public deliverable)
 CLAUDE.md
 docs/
+
+# local browser-automation screenshots/artifacts from visual QA passes
+.playwright-mcp/

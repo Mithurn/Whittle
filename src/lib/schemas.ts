@@ -38,7 +38,9 @@ export const AITechniqueSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   rationale: z.string().min(1),
-  resources: z.array(AIResourceSchema).min(1).max(3),
+  // Exactly 3: one video, one reading, one additional (audio or reading) —
+  // enforced at the prompt level too (route.ts), this is the hard backstop.
+  resources: z.array(AIResourceSchema).length(3),
 });
 
 export const AIPlanResponseSchema = z.object({

@@ -14,6 +14,15 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
+// Gemini's groundingChunks return a vertexaisearch.cloud.google.com redirect
+// wrapper, not the real destination — resolving it is a single redirect hop
+// (fetch with redirect:"manual", read Location), not a full page load, so
+// this stays fast. Verified live: Node's fetch does NOT apply opaque-redirect
+// response filtering server-side (that's a browser CORS concept), so the
+// Location header is actually readable — confirmed against a real grounding
+// call before writing this, not assumed from docs.
+const REDIRECT_RESOLUTION_TIMEOUT_MS = 2500;
+
 function devLog(label: string, usage: unknown) {
   if (process.env.NODE_ENV !== "production") {
     console.log(`[generate-plan] ${label} usage:`, usage);
@@ -38,7 +47,7 @@ const AI_PLAN_JSON_SCHEMA = {
           rationale: { type: "string" },
           resources: {
             type: "array",
-            minItems: 1,
+            minItems: 3,
             maxItems: 3,
             items: {
               type: "object",
@@ -86,13 +95,17 @@ const SEQUENCING_RULE =
   `Sequence techniques strictly from foundational to advanced — never place a technique before ` +
   `the prerequisite skills it depends on. Each technique should build on the ones before it.`;
 
+const RESOURCE_MIX_RULE =
+  `Each technique must have exactly 3 resources: one video, one reading/article, and one additional resource ` +
+  `(either audio or another reading/article, whichever fits the technique better) — never audio-only for a ` +
+  `technique that requires seeing physical form.`;
+
 function buildGroundedPrompt(input: GeneratePlanRequest): string {
   return (
     `${describeInput(input)}\n\n` +
     `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `Tailor the plan to the stated skill level, goal, and what they already know. For each technique, use Google Search to find ` +
-    `1-3 real, currently-live resources (a mix of video/reading/audio where sensible for a physical or practical skill — ` +
-    `never audio-only for a technique that requires seeing physical form). Each resource's URL must point to a genuinely distinct ` +
+    `real, currently-live resources. ${RESOURCE_MIX_RULE} Each resource's URL must point to a genuinely distinct ` +
     `source — never reuse the same URL for two different resources. For each resource include its exact title, exact URL, ` +
     `resource type, and a one-line reason it fits this specific user. Also include a one-line summary tying the plan to their goal.`
   );
@@ -103,15 +116,29 @@ function buildUngroundedPrompt(input: GeneratePlanRequest): string {
     `${describeInput(input)}\n\n` +
     `Create a learning plan with ${MIN_TECHNIQUES}-${MAX_TECHNIQUES} techniques for this hobby. ${SEQUENCING_RULE} ${RATIONALE_LENGTH_RULE} ` +
     `Tailor the plan to the stated skill level, goal, and what they already know. You do not have access to live search, so for each ` +
-    `technique's 1-3 resources, write a plausible title and resource type (a mix of video/reading/audio where sensible — never ` +
-    `audio-only for a technique that requires seeing physical form) and a one-line reason it fits this user. For the "url" field, ` +
-    `write any well-formed https URL as a placeholder — it will be discarded and replaced automatically, so it does not need to be real. ` +
-    `Also include a one-line summary tying the plan to their goal.`
+    `technique's resources, write a plausible title and resource type. ${RESOURCE_MIX_RULE} Write a one-line reason each resource ` +
+    `fits this user. For the "url" field, write any well-formed https URL as a placeholder — it will be discarded and replaced ` +
+    `automatically, so it does not need to be real. Also include a one-line summary tying the plan to their goal.`
   );
 }
 
-function buildStructuringPrompt(rawContent: string): string {
-  return `Convert this hobby learning plan into the required JSON structure:\n\n${rawContent}`;
+interface VerifiedResource {
+  url: string;
+  sourceName: string;
+}
+
+function buildStructuringPrompt(rawContent: string, verifiedResources: VerifiedResource[]): string {
+  const base = `Convert this hobby learning plan into the required JSON structure:\n\n${rawContent}`;
+  if (verifiedResources.length === 0) return base;
+
+  const verifiedList = verifiedResources.map((r, i) => `${i + 1}. ${r.url} (${r.sourceName})`).join("\n");
+  return (
+    `${base}\n\n` +
+    `Here are the verified, real source URLs found by Google Search:\n${verifiedList}\n\n` +
+    `For each resource, you MUST use a URL from this verified list — match each resource to whichever verified URL best fits ` +
+    `its title, content type, and source, based on the plan text above. Never invent, modify, or guess a URL. If no verified ` +
+    `URL is left that fits a resource well, write "https://unresolved.invalid" for that resource's url instead of guessing.`
+  );
 }
 
 let genAI: GoogleGenAI | null = null;
@@ -122,7 +149,17 @@ function getGenAI(): GoogleGenAI {
   return genAI;
 }
 
-async function callGeminiGrounded(prompt: string): Promise<string> {
+interface GroundingChunkRef {
+  uri?: string;
+  title?: string;
+}
+
+interface GroundedResult {
+  text: string;
+  chunks: GroundingChunkRef[];
+}
+
+async function callGeminiGrounded(prompt: string): Promise<GroundedResult> {
   const response = await getGenAI().models.generateContent({
     model: GEMINI_MODEL,
     contents: prompt,
@@ -131,7 +168,45 @@ async function callGeminiGrounded(prompt: string): Promise<string> {
   devLog("gemini-grounding", response.usageMetadata);
   const text = response.text;
   if (!text) throw new Error("Gemini grounding call returned no text");
-  return text;
+  const rawChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+  const chunks = rawChunks.map((chunk) => ({ uri: chunk.web?.uri, title: chunk.web?.title }));
+  return { text, chunks };
+}
+
+// A single redirect hop, not a full page fetch — reads the Location header
+// and stops there. Verified live (not assumed) that Node's fetch exposes
+// this header for redirect:"manual" requests; the opaque-redirect filtering
+// that would normally hide it is a browser CORS concept, not applicable
+// server-side.
+async function resolveRedirectUrl(uri: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REDIRECT_RESOLUTION_TIMEOUT_MS);
+  try {
+    const res = await fetch(uri, { redirect: "manual", signal: controller.signal });
+    return res.headers.get("location");
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Resolves every grounding chunk's redirect wrapper to its real destination,
+// in parallel. A chunk that fails or times out is just dropped — it never
+// makes it into the verified list, so it naturally falls back to
+// constructSearchUrl later (see toHobbyPlan), the same as if grounding had
+// never found it at all.
+async function resolveVerifiedResources(chunks: GroundingChunkRef[]): Promise<VerifiedResource[]> {
+  const resolved = await Promise.all(
+    chunks.map(async (chunk): Promise<VerifiedResource | null> => {
+      if (!chunk.uri) return null;
+      const realUrl = await resolveRedirectUrl(chunk.uri);
+      if (!realUrl) return null;
+      return { url: realUrl, sourceName: deriveSourceName(realUrl) };
+    })
+  );
+  const unique = new Map(resolved.filter((r): r is VerifiedResource => r !== null).map((r) => [r.url, r]));
+  return Array.from(unique.values());
 }
 
 async function callChatJsonSchema(
@@ -209,9 +284,20 @@ async function structureWithFallback(userContent: string): Promise<AIPlanRespons
   });
 }
 
-async function generateGroundedPlan(input: GeneratePlanRequest): Promise<AIPlanResponse> {
-  const groundedText = await callGeminiGrounded(buildGroundedPrompt(input));
-  return structureWithFallback(buildStructuringPrompt(groundedText));
+interface GroundedPlanResult {
+  aiPlan: AIPlanResponse;
+  // Resolved, real destination URLs — never the vertexaisearch redirect
+  // wrapper. Empty set flows through toHobbyPlan exactly like the
+  // ungrounded path: every resource falls back to constructSearchUrl.
+  verifiedUrls: Set<string>;
+}
+
+async function generateGroundedPlan(input: GeneratePlanRequest): Promise<GroundedPlanResult> {
+  const { text, chunks } = await callGeminiGrounded(buildGroundedPrompt(input));
+  const verifiedResources = await resolveVerifiedResources(chunks);
+  devLog("verified-resources", { chunkCount: chunks.length, verifiedCount: verifiedResources.length });
+  const aiPlan = await structureWithFallback(buildStructuringPrompt(text, verifiedResources));
+  return { aiPlan, verifiedUrls: new Set(verifiedResources.map((r) => r.url)) };
 }
 
 const KNOWN_SOURCE_NAMES: Record<string, string> = {
@@ -248,7 +334,14 @@ async function generateUngroundedPlan(input: GeneratePlanRequest): Promise<AIPla
   return structureWithFallback(buildUngroundedPrompt(input));
 }
 
-function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyPlan {
+// verifiedUrls is empty for the ungrounded path (nothing to verify — every
+// resource falls back to constructSearchUrl, same as before) and populated
+// for the grounded path with real, redirect-resolved destination URLs. A
+// resource only gets its AI-provided url trusted directly if it's an exact
+// member of that set; anything else (Groq deviated, invented a URL, or
+// there weren't enough verified sources for every slot) falls back to a
+// constructed search URL — the guaranteed-resolving link, never a guess.
+function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse, verifiedUrls: Set<string>): HobbyPlan {
   return {
     id: crypto.randomUUID(),
     hobbyName: input.hobbyName,
@@ -265,23 +358,22 @@ function toHobbyPlan(input: GeneratePlanRequest, aiPlan: AIPlanResponse): HobbyP
       rationale: technique.rationale,
       status: "not_started",
       order,
-      resources: technique.resources.map(
-        (resource): Resource => ({
+      resources: technique.resources.map((resource): Resource => {
+        const url = verifiedUrls.has(resource.url) ? resource.url : constructSearchUrl(resource, input.hobbyName);
+        return {
           id: crypto.randomUUID(),
           type: resource.type,
           title: resource.title,
-          // Even grounded URLs from Gemini's search have turned out to
-          // 404 in practice — every resource link is forced through a
-          // constructed search URL so it's always guaranteed to resolve.
-          url: constructSearchUrl(resource, input.hobbyName),
-          // Derived from the AI's original URL (grounded: a real search
-          // hit; ungrounded: a placeholder), not the constructed one —
-          // otherwise every badge would flatten to just "Youtube"/"Google"
-          // and lose the source variety the grounded path actually found.
-          sourceName: deriveSourceName(resource.url),
+          url,
+          // Derived from the final url either way — a verified url is a
+          // real resolved destination (e.g. youtube.com), and a constructed
+          // search url already derives a sensible name (YouTube/Google) on
+          // its own, so there's no separate "preserve the original" case
+          // to handle anymore.
+          sourceName: deriveSourceName(url),
           whyChosen: resource.whyChosen,
-        })
-      ),
+        };
+      }),
     })),
   };
 }
@@ -305,12 +397,15 @@ export async function POST(req: NextRequest) {
 
   try {
     let aiPlan: AIPlanResponse;
+    let verifiedUrls = new Set<string>();
     try {
-      aiPlan = await generateGroundedPlan(input);
+      const grounded = await generateGroundedPlan(input);
+      aiPlan = grounded.aiPlan;
+      verifiedUrls = grounded.verifiedUrls;
     } catch {
       aiPlan = await generateUngroundedPlan(input);
     }
-    return NextResponse.json(toHobbyPlan(input, aiPlan), { status: 200 });
+    return NextResponse.json(toHobbyPlan(input, aiPlan, verifiedUrls), { status: 200 });
   } catch (err) {
     console.error("[generate-plan] failed after all fallbacks", err);
     return NextResponse.json(

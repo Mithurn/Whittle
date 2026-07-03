@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 defaults dark: to the prefers-color-scheme media query, not a
+   class selector. next-themes toggles a .dark class on <html> instead — without
+   this, every dark: utility class would follow the visitor's OS setting and
+   silently ignore ThemeToggle entirely. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Lumi Ambient System — "Midnight Hearth" Design Tokens
  * All accent colors derived from the animated flame mascot.

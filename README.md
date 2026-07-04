@@ -20,7 +20,7 @@
   <a href="#live-demo--walkthrough">Live Demo</a> •
   <a href="#merylls-learning-philosophy">Meryll's Philosophy</a> •
   <a href="#key-features">Key Features</a> •
-  <a href="#recent-uiux-fixes">Recent UI/UX Fixes</a> •
+  <a href="#recent-fixes--product-loop-post-feedback">Recent Fixes & Product Loop</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#running-locally">Running Locally</a>
 </p>
@@ -43,7 +43,7 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
    - **Introduction:** Why does this matter?
    - **Watch & Learn:** High-quality Video & Audio (Podcast) resources embedded seamlessly.
    - **How it Works:** Step-by-step breakdown distilled directly from real articles.
-   - **Watch Out For:** Common mistakes & pro tips (pros/cons).
+   - **Watch Out For:** Common mistakes & pro tips.
    - **Master:** A final recap, key takeaways, and a place to jot down your notes.
 2. **Anti-Dark Patterns & The Reward Loop:** We completely reject gamification. You will not find streaks, leaderboards, or arbitrary points economies here. Instead, we rely on a **rich, native reward loop**: 
    - Physics-based micro-animations (e.g. spring-loaded checkmarks).
@@ -64,10 +64,16 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
 - **Responsive technique detail** — desktop modal / mobile bottom sheet UI patterns that feel native.
 - **249 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
 
-## Recent UI/UX Fixes (Post-Feedback)
+## Recent Fixes & Product Loop (Post-Feedback)
 
-We recently underwent a massive polish pass to ensure the app hits a native, premium standard:
-- **In-App Native Content:** We eliminated the horrible experience of kicking users out to external links. Video resources now play inside a native YouTube iframe embed, and Audio resources play inside a custom Podcast widget (`PodcastMode.tsx`).
+Based on recent feedback, we underwent a massive polish pass to ensure the app hits a premium, native standard and closes the loop on a complete product flow:
+
+- **Complete Native Learning Journey:** We eliminated the horrible UX of kicking users out to external links. The entire 5-step "Meryll's Philosophy" journey is now built fully in-app as a unified product loop:
+  - *Slide 1 (Introduction):* JIT personalized context.
+  - *Slide 2 (Watch & Learn):* Video resources play inside a native YouTube iframe embed, and Audio resources play inside our custom-built Podcast widget.
+  - *Slide 3 (How It Works):* Step-by-step breakdown directly synthesized from real, scraped web articles.
+  - *Slide 4 (Watch Out For):* A detailed Pros/Cons and Mistake tracker.
+  - *Slide 5 (Master):* Key Takeaways with an integrated **Bonus Notes Section**—users can click any Key Takeaway to instantly save it to their personal notes before marking the lesson complete.
 - **Persistent Slide Indexing:** The exact slide you are on inside a lesson is now cached in `sessionStorage`. If you accidentally refresh or close your phone, you resume exactly where you were.
 - **JIT Fetching Pipeline:** Lessons (Key Takeaways, Mistakes, Steps) are generated Just-In-Time as soon as you open a technique, completely eliminating blocking wait times during the initial plan generation.
 - **Improved Podcast Matching:** Added explicit "episode" constraints to our audio Serper queries, ensuring you get actual playable podcasts instead of generic search pages.

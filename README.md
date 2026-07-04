@@ -60,8 +60,8 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
 - **Real web-search resource discovery** — every resource link comes from an actual Serper.dev (Google Search/Video API) search.
 - **Dynamic Mascot Companion** — a character reacting to your specific progress, giving you personalized encouragement rather than generic praise.
 - **Mark Mastered / Skip** — skip is fully reversible via a dedicated "bring back" action.
-- **Responsive technique detail** — desktop modal / mobile bottom sheet UI patterns that feel native.
-- **249 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
+- **Native responsive overlays** — the Notes panel is a side panel on desktop and a true bottom sheet on mobile.
+- **281 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
 
 ## Recent Fixes & Product Loop (Post-Feedback)
 
@@ -147,7 +147,7 @@ SERPER_API_KEY=your_key_here
 
 ```bash
 npm run dev      # start the dev server at localhost:3000
-npm test         # run the test suite (249 tests, fully mocked)
+npm test         # run the test suite (281 tests, fully mocked)
 npm run build    # production build
 ```
 

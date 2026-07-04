@@ -12,18 +12,19 @@ interface NotesDrawerProps {
   onAdd: (note: { title: string; description: string }) => void;
   onUpdate: (noteId: string, note: { title: string; description: string }) => void;
   onRemove: (noteId: string) => void;
+  openNoteId: string | null;
+  setOpenNoteId: (id: string | null) => void;
 }
 
 // Slides in from the right, covering roughly a third of the page — wide
 // enough to read comfortably without fully hiding the content the notes
 // are about. A plain transform-based panel (not a nested Base UI Drawer)
 // keeps this independent of whatever tab/section is active underneath.
-export function NotesDrawer({ isOpen, notes, onClose, onAdd, onUpdate, onRemove }: NotesDrawerProps) {
+export function NotesDrawer({ isOpen, notes, onClose, onAdd, onUpdate, onRemove, openNoteId, setOpenNoteId }: NotesDrawerProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
 
   function handleSave() {
     const trimmedTitle = title.trim();

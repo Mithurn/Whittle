@@ -42,6 +42,8 @@ export default function TechniquePage() {
   const [fetchState, setFetchState] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   
   // Persist slide index across refreshes
   useEffect(() => {
@@ -61,7 +63,6 @@ export default function TechniquePage() {
       sessionStorage.setItem(`slideIndex-${params.id}`, slideIndex.toString());
     }
   }, [slideIndex, hydrated, params?.id]);
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
 
   const { video, reading, audio } = useMemo(() => {
     return technique ? categorizeResources(technique.resources) : { video: [], reading: [], audio: [] };
@@ -166,22 +167,17 @@ export default function TechniquePage() {
     router.push("/");
   }
 
-  // Skipping is neutral, not a failure (see copy-guidelines.md) — no
-  // celebration, no confirmation step, just a status change and back to
-  // the roadmap. Reversible from there via SkippedTechniquesList.
   function handleSkip() {
     updateTechniqueStatus(technique!.id, "skipped");
     router.push("/");
   }
 
-  // JIT Loading State for AI-generated slides (Slide 3+)
   const needsAI = ["howItWorks", "mistakesTips", "podcast"].includes(currentSlide.id);
   const isAILoading = needsAI && (!technique.lesson || fetchState === "loading");
   const isAIError = needsAI && fetchState === "error";
 
   return (
     <div className="relative min-h-dvh bg-background pb-28 overflow-x-hidden">
-      {/* Top Nav */}
       <div className="sticky top-0 z-30 bg-background/95 px-4 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-3xl items-center gap-3 pr-12">
           <Link
@@ -199,11 +195,6 @@ export default function TechniquePage() {
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-4 sm:px-8 relative min-h-[60vh]">
-        {/* mode="wait" (not the previous "popLayout") — these slides are
-            text-dense, so a crossfade with both on screen at once reads as
-            smeared ghosting rather than a clean transition. Waiting for the
-            exit to finish before the next slide enters removes any overlap
-            entirely, regardless of spring timing. */}
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
             key={slideIndex}
@@ -381,9 +372,6 @@ export default function TechniquePage() {
                   </p>
                 </div>
 
-                {/* Folded in from the old standalone "Summary" slide — a
-                    short recap sitting right next to the mastery action
-                    instead of a disconnected table shown as its own step. */}
                 {technique.lesson?.keyTakeaways && technique.lesson.keyTakeaways.length > 0 && (
                   <div className="flex flex-col gap-3 max-w-2xl mx-auto w-full px-2">
                     <h2 className="font-heading text-lg font-bold text-text-primary">
@@ -427,7 +415,10 @@ export default function TechniquePage() {
                     </h2>
                     <button
                       type="button"
-                      onClick={() => setIsNotesOpen(true)}
+                      onClick={() => {
+                        setOpenNoteId(null);
+                        setIsNotesOpen(true);
+                      }}
                       className="text-primary text-sm font-semibold hover:underline flex items-center gap-1"
                     >
                       <Plus size={16} /> Add Note
@@ -439,7 +430,10 @@ export default function TechniquePage() {
                       {technique.notes.map(note => (
                         <div 
                           key={note.id} 
-                          onClick={() => setIsNotesOpen(true)}
+                          onClick={() => {
+                            setOpenNoteId(note.id);
+                            setIsNotesOpen(true);
+                          }}
                           className="rounded-2xl border border-border bg-surface-1 p-5 cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all text-left group"
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -455,7 +449,10 @@ export default function TechniquePage() {
                       <p className="font-sans text-text-muted mb-4">You haven&apos;t taken any notes for this lesson yet.</p>
                       <button
                         type="button"
-                        onClick={() => setIsNotesOpen(true)}
+                        onClick={() => {
+                          setOpenNoteId(null);
+                          setIsNotesOpen(true);
+                        }}
                         className="inline-flex items-center gap-2 rounded-xl bg-surface-2 px-5 py-2.5 font-label text-sm font-semibold text-text-primary hover:bg-surface-3 transition-colors shadow-sm border border-border/50"
                       >
                         <Edit3 size={16} />
@@ -500,10 +497,8 @@ export default function TechniquePage() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom Nav / Progress Bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {/* Progress Indicators */}
           <div className="flex justify-center gap-1.5 px-4">
             {slides.map((s, idx) => (
               <div 
@@ -529,16 +524,12 @@ export default function TechniquePage() {
               </button>
             </div>
 
-            {/* Absolute positioning on md+ ensures it's perfectly centered 
-                regardless of side button widths. On mobile, we keep it in normal flow 
-                with flex-1 to prevent overlapping the buttons if space is tight. */}
             <div className="flex items-center gap-2 justify-center flex-1 min-w-0 px-2 md:absolute md:left-1/2 md:-translate-x-1/2 pointer-events-none">
               {currentSlide.icon && <currentSlide.icon size={16} className="text-mascot-body shrink-0" />}
               <span className="font-label text-sm font-semibold text-text-primary truncate">{currentSlide.title}</span>
             </div>
 
             <div className="flex shrink-0 items-center justify-end gap-1">
-              {/* Podcast quick-jump button */}
               {audio.length > 0 && currentSlide.id !== "podcast" && (
                 <button
                   type="button"
@@ -567,16 +558,12 @@ export default function TechniquePage() {
                 {hasNext && <Play size={16} aria-hidden="true" className="shrink-0" />}
               </button>
 
-              {/* Notes — used to be a separate absolutely-positioned overlay
-                  anchored to the footer's bottom-right corner, which at
-                  narrow widths painted directly on top of the Next button
-                  (positioned elements always paint above normal-flow
-                  siblings, regardless of DOM order) and hid it completely.
-                  Now a normal flex item in the same shrink-0-protected
-                  group, so it can never overlap anything. */}
               <button
                 type="button"
-                onClick={() => setIsNotesOpen(true)}
+                onClick={() => {
+                  setOpenNoteId(null);
+                  setIsNotesOpen(true);
+                }}
                 className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1.5 font-label text-sm font-semibold text-text-primary transition-colors duration-150 hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body ml-1"
               >
                 <Edit3 size={14} className="shrink-0" />
@@ -594,6 +581,8 @@ export default function TechniquePage() {
         onAdd={(note) => addTechniqueNote(technique.id, note)}
         onUpdate={(noteId, note) => updateTechniqueNote(technique.id, noteId, note)}
         onRemove={(noteId) => removeTechniqueNote(technique.id, noteId)}
+        openNoteId={openNoteId}
+        setOpenNoteId={setOpenNoteId}
       />
     </div>
   );

@@ -53,6 +53,7 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
 ## Live Demo & Walkthrough
 
 - **Live demo:** [whittle-hobbies.vercel.app](https://whittle-hobbies.vercel.app/)
+- **Loom walkthrough:** [Watch here](https://www.loom.com/share/f69510928228483ba8d1669a8039797e)
 
 ## Key Features
 

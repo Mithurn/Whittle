@@ -40,11 +40,11 @@ interface CapturedCall {
 
 // structureWithFallback now calls Groq twice per plan — once to invent the
 // curriculum ("hobby_curriculum"), once to invent resources for it
-// ("hobby_resources") — see llm-service.ts's two-stage pipeline (decisions.md
-// #13). A single shared mock response for both calls made every assertion
-// here silently check whichever call happened to run last instead of the
-// one it meant to test. This dispatches by schema name so each stage can be
-// asserted on (or made to fail) independently.
+// ("hobby_resources") — see llm-service.ts's two-stage pipeline. A single
+// shared mock response for both calls made every assertion here silently
+// check whichever call happened to run last instead of the one it meant to
+// test. This dispatches by schema name so each stage can be asserted on (or
+// made to fail) independently.
 function mockGroqTwoStage(opts: {
   curriculum?: unknown | ((attempt: number) => unknown);
   resources?: unknown | ((attempt: number) => unknown);

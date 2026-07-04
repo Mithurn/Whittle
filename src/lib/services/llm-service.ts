@@ -152,9 +152,9 @@ function buildCurriculumPrompt(input: GeneratePlanRequest, targetCount: number):
 
 // Groq's raw two-stage response shapes. Trusted only structurally here —
 // the final merged payload is re-validated against AIPlanResponseSchema at
-// the end of structureWithFallback, which is the actual safety net
-// (decisions.md #6); these types just describe what the pipeline expects
-// to flow between its own steps.
+// the end of structureWithFallback, which is the actual safety net; these
+// types just describe what the pipeline expects to flow between its own
+// steps.
 interface CurriculumResponse {
   summary: string;
   techniques: Array<{ name: string; description: string; rationale: string }>;

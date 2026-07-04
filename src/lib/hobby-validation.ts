@@ -1,7 +1,7 @@
 // Basic sanity bounds — separate from HOBBY_NAME_MAX in schemas.ts, which
-// exists for a different reason (the hard input-length cap on anything
-// forwarded to the LLM, per CLAUDE.md's LLM-call guardrails). This range
-// just rules out a single stray keystroke or an absurdly long paste.
+// exists for a different reason (a hard input-length cap on anything
+// forwarded to the LLM, to bound token cost and prompt-injection surface).
+// This range just rules out a single stray keystroke or an absurdly long paste.
 const MIN_LENGTH = 2;
 const MAX_LENGTH = 49;
 

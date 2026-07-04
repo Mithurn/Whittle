@@ -4,9 +4,9 @@ const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 // Hard input cap on article text forwarded to the model — an unbounded
-// scraped article is both a token-cost risk and a prompt-injection surface
-// (CLAUDE.md's LLM-call guardrails). ~12k chars ≈ ~3k tokens, plenty for
-// the model to find the valuable sections of any real tutorial article.
+// scraped article is both a token-cost risk and a prompt-injection surface.
+// ~12k chars ≈ ~3k tokens, plenty for the model to find the valuable
+// sections of any real tutorial article.
 export const ARTICLE_INPUT_MAX_CHARS = 12_000;
 
 const CONDENSE_TIMEOUT_MS = 15_000; // Increased slightly for JSON generation

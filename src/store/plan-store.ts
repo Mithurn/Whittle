@@ -3,8 +3,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { HobbyPlan, Technique, TechniqueStatus, LessonContent } from "@/types/domain";
 
 // v0 -> v1: Technique.notes changed from a plain string to a structured
-// NoteEntry[] (see decisions.md #16). Any plan already sitting in a
-// browser's localStorage from before this change still has the old shape
+// NoteEntry[]. Any plan already sitting in a browser's localStorage from
+// before this change still has the old shape
 // — without this migration, technique.notes reads as a string/undefined
 // instead of an array, and the first `.find`/`.filter` call on it throws
 // at runtime (caught live: "notes.find is not a function"). A non-empty

@@ -38,8 +38,8 @@ function pickMessage(progress: ReturnType<typeof getProgress>, hobbyName: string
 
 // idle = default/current, success = everything mastered OR the one-shot
 // mastered-celebration beat. There's no "explaining" state anymore —
-// technique detail is a full page now (see decisions.md #16), not an
-// overlay opened above the roadmap the mascot needed to react to.
+// technique detail is a full page now, not an overlay opened above the
+// roadmap the mascot needed to react to.
 function pickMascotState(progress: ReturnType<typeof getProgress>, celebrating: boolean): "idle" | "success" {
   if (celebrating) return "success";
   if (progress.percentage === 100 && progress.total > 0) return "success";

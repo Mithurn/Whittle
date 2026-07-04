@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 
 // r.jina.ai returns real markdown, and showing that raw (with visible #, **,
-// [text](url), ![alt](url), and table syntax) would fail CLAUDE.md's "must
-// look deliberately designed" bar. A full markdown library (react-markdown +
-// remark/rehype) is real bundle weight for a rubric that explicitly scores
-// base bundle size — this covers the actual subset jina's output uses
-// (headings, bold/italic, links, images, tables, lists, paragraphs) with
-// zero new dependencies.
+// [text](url), ![alt](url), and table syntax) would look unfinished, not
+// deliberately designed. A full markdown library (react-markdown +
+// remark/rehype) is real bundle weight this app doesn't need — this covers
+// the actual subset jina's output uses (headings, bold/italic, links,
+// images, tables, lists, paragraphs) with zero new dependencies.
 
 const INLINE_PATTERN = /\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\)/g;
 

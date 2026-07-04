@@ -7,7 +7,7 @@ import { useState } from "react";
 // stance, a board position), not just a reference link, so they render
 // fully visible with a caption, styled like a real app card. Gracefully
 // disappears rather than showing a broken-image icon if the model's
-// reported URL 404s (see decisions.md's "never trust an unverified URL").
+// reported URL 404s — an AI-sourced URL is never trusted as guaranteed-valid.
 interface ImageCardProps {
   url: string;
   caption: string;

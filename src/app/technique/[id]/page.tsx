@@ -143,11 +143,6 @@ export default function TechniquePage() {
         console.error("[JIT Fetch Error/Timeout]:", err);
         setFetchState("error");
       });
-
-    return () => {
-      clearTimeout(timeoutId);
-      controller.abort();
-    };
   }, [hydrated, technique, currentPlan, fetchState, reading, setTechniqueLesson]);
 
   if (!hydrated) {

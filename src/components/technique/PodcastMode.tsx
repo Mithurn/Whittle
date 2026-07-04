@@ -21,7 +21,7 @@ export function PodcastMode({ audioResource }: PodcastModeProps) {
       <div className="flex flex-col gap-6 relative h-[480px] w-full max-w-2xl mx-auto rounded-3xl bg-surface-1 border border-border overflow-hidden shadow-sm items-center justify-center p-6 text-center">
         <AlertCircle size={48} className="text-text-muted mb-4 opacity-50" />
         <h3 className="text-xl font-heading font-bold text-text-primary">No Podcast Found</h3>
-        <p className="text-text-muted">We couldn't find a reliable podcast episode for this specific technique.</p>
+        <p className="text-text-muted">We couldn&apos;t find a reliable podcast episode for this specific technique.</p>
       </div>
     );
   }
@@ -104,7 +104,7 @@ export function PodcastMode({ audioResource }: PodcastModeProps) {
             <Headphones size={28} className="text-primary" />
           </div>
           <h3 className="text-xl font-heading font-bold text-text-primary mb-3 line-clamp-2 px-6">{title}</h3>
-          <p className="text-text-muted mb-8 px-8">This specific podcast couldn't be embedded, but you can listen to it directly on the web.</p>
+          <p className="text-text-muted mb-8 px-8">This specific podcast couldn&apos;t be embedded, but you can listen to it directly on the web.</p>
           <Link 
             href={url} 
             target="_blank" 

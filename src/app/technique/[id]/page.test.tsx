@@ -5,6 +5,13 @@ import TechniquePage from "./page";
 import { usePlanStore } from "@/store/plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";
 
+// lottie-react needs a real <canvas> context, which jsdom doesn't provide —
+// a lightweight stand-in is enough to assert render/fetch behavior. Matches
+// the pattern already used by CampfireNode.test.tsx / RoadmapBackground.test.tsx.
+vi.mock("lottie-react", () => ({
+  default: () => <div data-testid="lottie" />,
+}));
+
 const pushMock = vi.fn();
 let currentParamId = "t0";
 
@@ -23,7 +30,7 @@ const technique: Technique = {
       id: "r0",
       type: "video",
       title: "Mastering the Fork",
-      url: "https://youtube.com/watch?v=abc",
+      url: "https://youtube.com/watch?v=abcdefghijk",
       sourceName: "YouTube",
       whyChosen: "Grandmaster analysis of double attacks.",
     },
@@ -55,12 +62,39 @@ function makePlan(techniques: Technique[]): HobbyPlan {
   };
 }
 
+// The page fires a background JIT fetch for the lesson content (How it
+// Works / Pros & Cons / Summary) the moment it mounts, regardless of which
+// slide is showing — every test needs this stubbed so that fetch doesn't
+// reject unhandled or spam the console, even tests that never navigate to
+// an AI-generated slide.
+function mockLessonFetch() {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      intro: "Forking attacks two pieces with one move.",
+      howItWorks: {
+        overview: "Line up your piece so it threatens two targets at once.",
+        steps: [{ title: "Spot the fork", text: "Look for two undefended pieces on one line." }],
+      },
+      prosCons: { advantages: ["Wins material"], disadvantages: ["Needs a tactical eye"] },
+      summaryTable: { headers: ["Piece", "Best used"], rows: [["Knight", "Forking king and rook"]] },
+    }),
+  }) as unknown as typeof fetch;
+}
+
+async function goToSlide(user: ReturnType<typeof userEvent.setup>, times: number) {
+  for (let i = 0; i < times; i++) {
+    await user.click(screen.getByRole("button", { name: /^next$/i }));
+  }
+}
+
 describe("TechniquePage", () => {
   beforeEach(() => {
     localStorage.clear();
     pushMock.mockClear();
     currentParamId = "t0";
     usePlanStore.setState({ currentPlan: null, celebratingTechniqueId: null });
+    mockLessonFetch();
   });
 
   it("shows a 'no plan found' fallback when there's no current plan", async () => {
@@ -76,25 +110,58 @@ describe("TechniquePage", () => {
     expect(await screen.findByText("We couldn't find that technique.")).toBeInTheDocument();
   });
 
-  it("defaults to the Video tab and embeds the YouTube resource", async () => {
+  it("opens on the Introduction slide showing the technique's rationale", async () => {
     usePlanStore.setState({ currentPlan: makePlan([technique]) });
     render(<TechniquePage />);
-    expect(await screen.findByRole("tab", { name: /video/i })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abc");
+    expect(await screen.findByRole("heading", { name: "Introduction" })).toBeInTheDocument();
+    expect(screen.getByText(technique.rationale)).toBeInTheDocument();
   });
 
-  it("switches tabs on click and auto-fetches the article for Reading", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ content: "The pin theory explained." }),
-    }) as unknown as typeof fetch;
+  it("falls back to the technique's raw description on the Introduction slide before the JIT lesson loads", async () => {
+    // Deliberately never resolves — asserts the pre-fetch state.
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => {})) as unknown as typeof fetch;
+    usePlanStore.setState({ currentPlan: makePlan([technique]) });
+    render(<TechniquePage />);
+    expect(await screen.findByRole("heading", { name: "Introduction" })).toBeInTheDocument();
+    expect(screen.getByText(technique.description)).toBeInTheDocument();
+  });
 
+  it("jumps straight to the Watch & Learn slide when the Introduction slide's video thumbnail is clicked", async () => {
     const user = userEvent.setup();
     usePlanStore.setState({ currentPlan: makePlan([technique]) });
     render(<TechniquePage />);
 
-    await user.click(await screen.findByRole("tab", { name: /reading/i }));
-    expect(await screen.findByText("The pin theory explained.")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Introduction" });
+    await user.click(screen.getByRole("button", { name: /watch the video for forking/i }));
+
+    expect(await screen.findByRole("heading", { name: "Watch & Learn" })).toBeInTheDocument();
+    expect(screen.getByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
+  });
+
+  it("advances to the Watch & Learn slide and embeds the YouTube resource", async () => {
+    const user = userEvent.setup();
+    usePlanStore.setState({ currentPlan: makePlan([technique]) });
+    render(<TechniquePage />);
+
+    await screen.findByRole("heading", { name: "Introduction" });
+    await goToSlide(user, 1);
+
+    expect(await screen.findByRole("heading", { name: "Watch & Learn" })).toBeInTheDocument();
+    expect(screen.getByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
+  });
+
+  it("shows the JIT-generated How it Works content once the background lesson fetch resolves", async () => {
+    const user = userEvent.setup();
+    usePlanStore.setState({ currentPlan: makePlan([technique]) });
+    render(<TechniquePage />);
+
+    await screen.findByRole("heading", { name: "Introduction" });
+    await goToSlide(user, 2);
+
+    expect(await screen.findByRole("heading", { name: "How it Works", level: 1 })).toBeInTheDocument();
+    expect(
+      await screen.findByText("Line up your piece so it threatens two targets at once.")
+    ).toBeInTheDocument();
   });
 
   it("marks the technique mastered, triggers celebration, and navigates back to the roadmap", async () => {
@@ -102,8 +169,10 @@ describe("TechniquePage", () => {
     usePlanStore.setState({ currentPlan: makePlan([technique]) });
     render(<TechniquePage />);
 
-    await user.click(await screen.findByRole("tab", { name: /master/i }));
-    await user.click(screen.getByRole("button", { name: /mark as mastered/i }));
+    await screen.findByRole("heading", { name: "Introduction" });
+    await goToSlide(user, 5);
+
+    await user.click(await screen.findByRole("button", { name: /complete lesson/i }));
 
     expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("mastered");
     expect(usePlanStore.getState().celebratingTechniqueId).toBe("t0");
@@ -115,20 +184,22 @@ describe("TechniquePage", () => {
     usePlanStore.setState({ currentPlan: makePlan([technique]) });
     render(<TechniquePage />);
 
-    await user.click(await screen.findByRole("tab", { name: /master/i }));
-    await user.click(screen.getByRole("button", { name: /skip this technique/i }));
+    await screen.findByRole("heading", { name: "Introduction" });
+    await goToSlide(user, 5);
+
+    await user.click(await screen.findByRole("button", { name: /skip this technique/i }));
 
     expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("skipped");
     expect(usePlanStore.getState().celebratingTechniqueId).toBeNull();
     expect(pushMock).toHaveBeenCalledWith("/");
   });
 
-  it("opens the notes drawer and adds a structured note", async () => {
+  it("opens the notes drawer and adds a note", async () => {
     const user = userEvent.setup();
     usePlanStore.setState({ currentPlan: makePlan([technique]) });
     render(<TechniquePage />);
 
-    await user.click(await screen.findByRole("button", { name: /^notes/i }));
+    await user.click(await screen.findByRole("button", { name: /^notes$/i }));
     await user.click(screen.getByRole("button", { name: /add a note/i }));
     await user.type(screen.getByPlaceholderText("Note title"), "Watch for the fork");
     await user.click(screen.getByRole("button", { name: /save note/i }));

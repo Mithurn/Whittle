@@ -154,10 +154,12 @@ describe("POST /api/generate-plan", () => {
 
     const res = await POST(makeRequest(validRequestBody));
     expect(res.status).toBe(200);
-    // No retry — duplicates are cleaned up locally after the fact, not by
-    // re-generating the plan (that would just waste tokens on the same
-    // Serper collision happening again).
-    expect(groqCalls).toBe(1);
+    // structureWithFallback always makes exactly 2 Groq calls per successful
+    // generation now (curriculum, then resources — see llm-service.ts's
+    // two-stage pipeline). The point of this test is that the URL collision
+    // doesn't trigger a 3rd call to re-generate the plan — duplicates are
+    // cleaned up locally after the fact instead.
+    expect(groqCalls).toBe(2);
 
     const json = await res.json();
     const urls = json.techniques[0].resources.map((r: { url: string }) => r.url);
@@ -170,20 +172,31 @@ describe("POST /api/generate-plan", () => {
     expect(urls[2]).toMatch(/^https:\/\/www\.(youtube\.com\/results|google\.com\/search)\?/);
   });
 
-  it("retries Groq once and recovers when the first attempt fails schema validation", async () => {
-    let groqCalls = 0;
-    global.fetch = vi.fn(async (url: string | URL | Request) => {
+  it("retries the curriculum call once and recovers when it fails schema validation", async () => {
+    // structureWithFallback's two Groq calls (curriculum, then resources —
+    // see llm-service.ts) share this fetch mock, so failures are dispatched
+    // by the request's schema name rather than a single global call count —
+    // a shared counter can't tell which stage actually needed the retry.
+    let curriculumAttempts = 0;
+    let resourcesAttempts = 0;
+    global.fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes("serper.dev")) {
         return jsonResponse({ organic: [{ link: "https://example.com/a", title: "A" }] });
       }
       if (urlStr.includes("groq.com")) {
-        groqCalls++;
-        if (groqCalls === 1) {
-          return jsonResponse({
-            choices: [{ message: { content: JSON.stringify({ not: "the right shape" }) } }],
-            usage: {},
-          });
+        const body = JSON.parse(String(init?.body));
+        const schemaName = body.response_format.json_schema.name;
+        if (schemaName === "hobby_curriculum") {
+          curriculumAttempts++;
+          if (curriculumAttempts === 1) {
+            return jsonResponse({
+              choices: [{ message: { content: JSON.stringify({ not: "the right shape" }) } }],
+              usage: {},
+            });
+          }
+        } else {
+          resourcesAttempts++;
         }
         return jsonResponse({
           choices: [{ message: { content: JSON.stringify(makeValidAiPlan()) } }],
@@ -195,7 +208,8 @@ describe("POST /api/generate-plan", () => {
 
     const res = await POST(makeRequest(validRequestBody));
     expect(res.status).toBe(200);
-    expect(groqCalls).toBe(2);
+    expect(curriculumAttempts).toBe(2);
+    expect(resourcesAttempts).toBe(1);
   });
 
   it("returns a structured error response when Groq fails repeatedly", async () => {

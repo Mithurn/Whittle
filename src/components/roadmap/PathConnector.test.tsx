@@ -85,11 +85,18 @@ describe("PathConnector", () => {
   });
 
   it("gives connectors touching the current node the strongest glow (drop-shadow)", () => {
-    const anchor = renderConnector("current", "available").path;
+    // Near the current node, a second animated "pulse" path is layered on
+    // top of the base track specifically to carry this glow (the base
+    // track's own filter is "none" there, to avoid stacking two blurred
+    // shadows) — so this checks all paths for the glow, not just the first.
+    const { svg: anchorSvg } = renderConnector("current", "available");
+    const anchorFilters = Array.from(anchorSvg?.querySelectorAll("path") ?? []).map(
+      (p) => (p as SVGPathElement).style.filter
+    );
+    expect(anchorFilters.some((f) => f.includes("rgba(255,199,50"))).toBe(true);
+
     const normal = renderConnector("available", "available").path;
-    const anchorFilter = anchor?.style.filter ?? "";
     const normalFilter = normal?.style.filter ?? "";
-    expect(anchorFilter).toContain("rgba(255,199,50");
     expect(normalFilter).not.toContain("rgba(255,199,50");
   });
 });

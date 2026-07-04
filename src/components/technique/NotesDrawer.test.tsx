@@ -13,19 +13,19 @@ const note: NoteEntry = {
 
 describe("NotesDrawer", () => {
   it("shows an empty state when there are no notes", () => {
-    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={vi.fn()} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
   });
 
   it("shows only the note title in the list, not the description", () => {
-    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByText("Watch for forks")).toBeInTheDocument();
     expect(screen.queryByText("Check both diagonals before moving the king.")).not.toBeInTheDocument();
   });
 
   it("clicking a note title opens a popup with the full description", async () => {
     const user = userEvent.setup();
-    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: "Watch for forks" }));
     expect(await screen.findByText("Check both diagonals before moving the king.")).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe("NotesDrawer", () => {
   it("adds a note with title and description via the add form", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
-    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={onAdd} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={onAdd} onUpdate={vi.fn()} onRemove={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /add a note/i }));
     await user.type(screen.getByPlaceholderText("Note title"), "Key idea");
@@ -47,7 +47,7 @@ describe("NotesDrawer", () => {
   it("does not save a note with an empty title", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
-    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={onAdd} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[]} onClose={vi.fn()} onAdd={onAdd} onUpdate={vi.fn()} onRemove={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /add a note/i }));
     expect(screen.getByRole("button", { name: /save note/i })).toBeDisabled();
@@ -57,7 +57,7 @@ describe("NotesDrawer", () => {
   it("deletes a note from its detail popup", async () => {
     const user = userEvent.setup();
     const onRemove = vi.fn();
-    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onRemove={onRemove} />);
+    render(<NotesDrawer isOpen notes={[note]} onClose={vi.fn()} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={onRemove} />);
 
     await user.click(screen.getByRole("button", { name: "Watch for forks" }));
     await user.click(await screen.findByRole("button", { name: /delete/i }));
@@ -68,7 +68,7 @@ describe("NotesDrawer", () => {
   it("closes via the close button", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(<NotesDrawer isOpen notes={[]} onClose={onClose} onAdd={vi.fn()} onRemove={vi.fn()} />);
+    render(<NotesDrawer isOpen notes={[]} onClose={onClose} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /close notes/i }));
     expect(onClose).toHaveBeenCalled();

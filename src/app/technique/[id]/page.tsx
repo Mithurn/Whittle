@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus, Headphones } from "lucide-react";
+import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus, Headphones, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Lottie from "lottie-react";
 import { usePlanStore } from "@/store/plan-store";
@@ -121,7 +121,7 @@ export default function TechniquePage() {
     );
   }
 
-  const slides: { id: string; title: string; icon: any }[] = [];
+  const slides: { id: string; title: string; icon: LucideIcon }[] = [];
   slides.push({ id: "intro", title: "Introduction", icon: Info });
   if (video.length > 0) slides.push({ id: "video", title: "Watch & Learn", icon: Play });
   if (reading.length > 0) {
@@ -155,6 +155,14 @@ export default function TechniquePage() {
     router.push("/");
   }
 
+  // Skipping is neutral, not a failure (see copy-guidelines.md) — no
+  // celebration, no confirmation step, just a status change and back to
+  // the roadmap. Reversible from there via SkippedTechniquesList.
+  function handleSkip() {
+    updateTechniqueStatus(technique!.id, "skipped");
+    router.push("/");
+  }
+
   // JIT Loading State for AI-generated slides (Slide 3+)
   const needsAI = ["howItWorks", "prosCons", "summary", "podcast"].includes(currentSlide.id);
   const isAILoading = needsAI && (!technique.lesson || fetchState === "loading");
@@ -180,7 +188,12 @@ export default function TechniquePage() {
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-4 sm:px-8 relative min-h-[60vh]">
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+        {/* mode="wait" (not the previous "popLayout") — these slides are
+            text-dense, so a crossfade with both on screen at once reads as
+            smeared ghosting rather than a clean transition. Waiting for the
+            exit to finish before the next slide enters removes any overlap
+            entirely, regardless of spring timing. */}
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
             key={slideIndex}
             custom={direction}
@@ -204,17 +217,34 @@ export default function TechniquePage() {
                   if (!ytId) return null;
 
                   return (
-                    <div className="relative w-full h-48 sm:h-64 rounded-2xl overflow-hidden shadow-sm border border-border">
-                      <img 
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const videoIdx = slides.findIndex((s) => s.id === "video");
+                        if (videoIdx !== -1) {
+                          setDirection(videoIdx > slideIndex ? 1 : -1);
+                          setSlideIndex(videoIdx);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
+                      }}
+                      aria-label={`Watch the video for ${technique.name}`}
+                      className="group relative w-full h-48 sm:h-64 rounded-2xl overflow-hidden shadow-sm border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
+                    >
+                      <img
                         src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
-                        alt={technique.name} 
+                        alt={technique.name}
                         className="absolute inset-0 w-full h-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                    </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="flex size-14 items-center justify-center rounded-full bg-black/50 text-white transition-transform duration-150 group-hover:scale-110 group-hover:bg-black/60">
+                          <Play size={24} fill="currentColor" className="ml-1" aria-hidden="true" />
+                        </span>
+                      </div>
+                    </button>
                   );
                 })()}
                 
@@ -358,7 +388,7 @@ export default function TechniquePage() {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-border border-dashed bg-surface-1/50 p-10 text-center flex flex-col items-center justify-center">
-                      <p className="font-sans text-text-muted mb-4">You haven't taken any notes for this lesson yet.</p>
+                      <p className="font-sans text-text-muted mb-4">You haven&apos;t taken any notes for this lesson yet.</p>
                       <button
                         type="button"
                         onClick={() => setIsNotesOpen(true)}
@@ -387,6 +417,16 @@ export default function TechniquePage() {
                   >
                     <Flame size={18} aria-hidden="true" />
                     Complete Lesson
+                  </button>
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleSkip}
+                    className="min-h-11 rounded-md px-3 py-2 font-label text-sm font-semibold text-text-muted transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
+                  >
+                    Skip this technique
                   </button>
                 </div>
               </div>

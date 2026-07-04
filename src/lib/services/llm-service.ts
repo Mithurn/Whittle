@@ -150,7 +150,24 @@ function buildCurriculumPrompt(input: GeneratePlanRequest, targetCount: number):
   );
 }
 
-function buildResourcesPrompt(curriculum: any): string {
+// Groq's raw two-stage response shapes. Trusted only structurally here —
+// the final merged payload is re-validated against AIPlanResponseSchema at
+// the end of structureWithFallback, which is the actual safety net
+// (decisions.md #6); these types just describe what the pipeline expects
+// to flow between its own steps.
+interface CurriculumResponse {
+  summary: string;
+  techniques: Array<{ name: string; description: string; rationale: string }>;
+}
+
+interface ResourcesResponse {
+  techniques: Array<{
+    name: string;
+    resources: Array<{ type: string; title: string; url: string; whyChosen: string }>;
+  }>;
+}
+
+function buildResourcesPrompt(curriculum: CurriculumResponse): string {
   return (
     `Given the following learning curriculum:\n${JSON.stringify(curriculum, null, 2)}\n\n` +
     `For each technique, invent exactly 3 resources. Write a plausible title and resource type. ${RESOURCE_MIX_RULE} ` +
@@ -164,7 +181,7 @@ async function callChatJsonSchema(
   apiKey: string,
   model: string,
   userContent: string,
-  schema: any,
+  schema: object,
   schemaName: string
 ): Promise<unknown> {
   const res = await fetch(endpoint, {
@@ -199,7 +216,7 @@ async function callChatJsonSchema(
   return JSON.parse(content);
 }
 
-async function callGroq(userContent: string, schema: any, schemaName: string): Promise<unknown> {
+async function callGroq(userContent: string, schema: object, schemaName: string): Promise<unknown> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
   return callChatJsonSchema(GROQ_ENDPOINT, apiKey, GROQ_MODEL, userContent, schema, schemaName);
@@ -209,34 +226,40 @@ export async function structureWithFallback(input: GeneratePlanRequest): Promise
   const targetCount = getTargetTechniqueCount(input.timeCommitment);
   
   // Step 1: Generate Curriculum (The "What")
-  let curriculum: any;
+  let curriculum: CurriculumResponse | undefined;
   let curriculumError: unknown;
   const curriculumPrompt = buildCurriculumPrompt(input, targetCount);
   const curriculumSchema = buildCurriculumJsonSchema(targetCount);
-  
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      curriculum = await callGroq(curriculumPrompt, curriculumSchema, "hobby_curriculum");
-      if (curriculum && curriculum.techniques && curriculum.techniques.length > 0) break;
+      const result = (await callGroq(curriculumPrompt, curriculumSchema, "hobby_curriculum")) as CurriculumResponse;
+      if (result && result.techniques && result.techniques.length > 0) {
+        curriculum = result;
+        break;
+      }
     } catch (err) {
       curriculumError = err;
     }
   }
-  
+
   if (!curriculum) {
     throw new Error("Groq curriculum generation failed", { cause: curriculumError });
   }
 
   // Step 2: Generate Resources (The "Where" & "Why")
-  let resourcesResp: any;
+  let resourcesResp: ResourcesResponse | undefined;
   let resourcesError: unknown;
   const resourcesPrompt = buildResourcesPrompt(curriculum);
   const resourcesSchema = buildResourcesJsonSchema();
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      resourcesResp = await callGroq(resourcesPrompt, resourcesSchema, "hobby_resources");
-      if (resourcesResp && resourcesResp.techniques) break;
+      const result = (await callGroq(resourcesPrompt, resourcesSchema, "hobby_resources")) as ResourcesResponse;
+      if (result && result.techniques) {
+        resourcesResp = result;
+        break;
+      }
     } catch (err) {
       resourcesError = err;
     }
@@ -247,9 +270,9 @@ export async function structureWithFallback(input: GeneratePlanRequest): Promise
   }
 
   // Step 3: Merge and Enrich
-  const mergedTechniques = curriculum.techniques.map((tech: any) => {
+  const mergedTechniques = curriculum.techniques.map((tech) => {
     // Find the matching resources for this technique name
-    const resourceMatch = resourcesResp.techniques.find((r: any) => r.name === tech.name);
+    const resourceMatch = resourcesResp.techniques.find((r) => r.name === tech.name);
     return {
       ...tech,
       resources: resourceMatch ? resourceMatch.resources : []

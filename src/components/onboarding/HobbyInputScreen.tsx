@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "./ProgressBar";
 import { HOBBY_NAME_MAX } from "@/lib/schemas";
+import { isPlausibleHobbyName } from "@/lib/hobby-validation";
 
 const PLACEHOLDER_EXAMPLES = ["chess...", "guitar...", "watercolour...", "boxing...", "photography..."];
 const PLACEHOLDER_ROTATE_MS = 2500;
@@ -18,7 +19,11 @@ export function HobbyInputScreen({ initialValue, onNext, onBack }: HobbyInputScr
   const [value, setValue] = useState(initialValue);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
-  const isValid = value.trim().length > 0 && value.trim().length <= HOBBY_NAME_MAX;
+  const trimmedValue = value.trim();
+  const isWithinLengthCap = trimmedValue.length > 0 && trimmedValue.length <= HOBBY_NAME_MAX;
+  const isPlausible = trimmedValue.length === 0 || isPlausibleHobbyName(trimmedValue);
+  const isValid = isWithinLengthCap && isPlausible;
+  const showGibberishWarning = isWithinLengthCap && !isPlausible;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,10 +65,12 @@ export function HobbyInputScreen({ initialValue, onNext, onBack }: HobbyInputScr
             onChange={(e) => setValue(e.target.value)}
             placeholder={`e.g. ${PLACEHOLDER_EXAMPLES[placeholderIndex]}`}
             maxLength={HOBBY_NAME_MAX}
+            aria-invalid={showGibberishWarning}
+            aria-describedby={showGibberishWarning ? "hobby-name-warning" : undefined}
             className="
-              w-full bg-surface-2 border-2 border-border 
-              focus:border-mascot-body focus:ring-0 focus:outline-none 
-              rounded-xl px-5 py-4 text-text-primary text-lg 
+              w-full bg-surface-2 border-2 border-border
+              focus:border-mascot-body focus:ring-0 focus:outline-none
+              rounded-xl px-5 py-4 text-text-primary text-lg
               transition-all placeholder:text-text-muted
             "
             autoFocus
@@ -73,6 +80,11 @@ export function HobbyInputScreen({ initialValue, onNext, onBack }: HobbyInputScr
               }
             }}
           />
+          {showGibberishWarning && (
+            <p id="hobby-name-warning" className="mt-2 font-sans text-sm text-destructive">
+              Hmm, that doesn&apos;t look like a hobby — try something like chess, guitar, or painting.
+            </p>
+          )}
         </div>
       </div>
 

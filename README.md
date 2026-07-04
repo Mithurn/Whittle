@@ -53,7 +53,6 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
 ## Live Demo & Walkthrough
 
 - **Live demo:** [whittle-hobbies.vercel.app](https://whittle-hobbies.vercel.app/)
-- **Loom walkthrough:** _coming soon_
 
 ## Key Features
 
@@ -134,8 +133,8 @@ graph TB
 ## Running Locally
 
 ```bash
-git clone <repo-url>
-cd whittle
+git clone https://github.com/Mithurn/Whittle.git
+cd Whittle
 npm install
 ```
 

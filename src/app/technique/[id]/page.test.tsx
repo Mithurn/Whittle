@@ -137,7 +137,7 @@ describe("TechniquePage", () => {
     await user.click(screen.getByRole("button", { name: /watch the video for forking/i }));
 
     expect(await screen.findByRole("heading", { name: "Watch & Learn" })).toBeInTheDocument();
-    expect(screen.getByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
+    expect(await screen.findByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
   });
 
   it("advances to the Watch & Learn slide and embeds the YouTube resource", async () => {
@@ -149,7 +149,7 @@ describe("TechniquePage", () => {
     await goToSlide(user, 1);
 
     expect(await screen.findByRole("heading", { name: "Watch & Learn" })).toBeInTheDocument();
-    expect(screen.getByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
+    expect(await screen.findByTitle("Mastering the Fork")).toHaveAttribute("src", "https://www.youtube.com/embed/abcdefghijk");
   });
 
   it("shows the JIT-generated How it Works content once the background lesson fetch resolves", async () => {
@@ -194,6 +194,23 @@ describe("TechniquePage", () => {
     expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("skipped");
     expect(usePlanStore.getState().celebratingTechniqueId).toBeNull();
     expect(pushMock).toHaveBeenCalledWith("/");
+  });
+
+  it("resumes at the saved slide position for a non-skipped technique", async () => {
+    sessionStorage.setItem("slideIndex-t0", "1");
+    usePlanStore.setState({ currentPlan: makePlan([technique]) });
+    render(<TechniquePage />);
+
+    expect(await screen.findByRole("heading", { name: "Watch & Learn" })).toBeInTheDocument();
+  });
+
+  it("resets to the Introduction slide when reopening a skipped technique, ignoring any saved slide position", async () => {
+    sessionStorage.setItem("slideIndex-t0", "4");
+    usePlanStore.setState({ currentPlan: makePlan([{ ...technique, status: "skipped" }]) });
+    render(<TechniquePage />);
+
+    expect(await screen.findByRole("heading", { name: "Introduction" })).toBeInTheDocument();
+    expect(sessionStorage.getItem("slideIndex-t0")).toBeNull();
   });
 
   it("opens the notes drawer and adds a note", async () => {

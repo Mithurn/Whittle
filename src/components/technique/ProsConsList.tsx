@@ -17,39 +17,57 @@ interface ProsConsListProps {
 // splitting them into two side-by-side columns inside the page's
 // max-w-3xl content width left each column too narrow to read comfortably.
 export function ProsConsList({ tips, mistakes }: ProsConsListProps) {
+  // Defense-in-depth: the generation prompt now forbids empty arrays, but a
+  // stored plan generated before that change (or any future prompt drift)
+  // could still hand this component two empty arrays — render one calm
+  // fallback instead of two empty-looking bordered boxes.
+  if (tips.length === 0 && mistakes.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-2 p-5 text-center shadow-sm">
+        <p className="font-sans text-sm text-text-muted">
+          No specific tips or common mistakes for this one — just practice.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
-        <h3 className="font-heading text-lg font-semibold text-text-primary">Pro Tips</h3>
-        <ul className="flex flex-col gap-3">
-          {tips.map((tip, idx) => (
-            <li key={idx} className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
-                <Check size={12} strokeWidth={3} aria-hidden="true" />
-              </span>
-              <span className="font-sans text-sm text-text-muted [&_p]:m-0">
-                <MarkdownLite text={tip} />
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {tips.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
+          <h3 className="font-heading text-lg font-semibold text-text-primary">Pro Tips</h3>
+          <ul className="flex flex-col gap-3">
+            {tips.map((tip, idx) => (
+              <li key={idx} className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
+                  <Check size={12} strokeWidth={3} aria-hidden="true" />
+                </span>
+                <span className="font-sans text-sm text-text-muted [&_p]:m-0">
+                  <MarkdownLite text={tip} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
-        <h3 className="font-heading text-lg font-semibold text-text-primary">Common Mistakes</h3>
-        <ul className="flex flex-col gap-3">
-          {mistakes.map((mistake, idx) => (
-            <li key={idx} className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-500">
-                <X size={12} strokeWidth={3} aria-hidden="true" />
-              </span>
-              <span className="font-sans text-sm text-text-muted [&_p]:m-0">
-                <MarkdownLite text={mistake} />
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {mistakes.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
+          <h3 className="font-heading text-lg font-semibold text-text-primary">Common Mistakes</h3>
+          <ul className="flex flex-col gap-3">
+            {mistakes.map((mistake, idx) => (
+              <li key={idx} className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-500">
+                  <X size={12} strokeWidth={3} aria-hidden="true" />
+                </span>
+                <span className="font-sans text-sm text-text-muted [&_p]:m-0">
+                  <MarkdownLite text={mistake} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

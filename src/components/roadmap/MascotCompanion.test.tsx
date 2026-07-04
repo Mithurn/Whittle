@@ -59,13 +59,17 @@ describe("MascotCompanion", () => {
   it("shows the not-started prompt when nothing is mastered yet", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
     render(<MascotCompanion plan={plan} />);
-    expect(screen.getAllByText("Ready to light the first fire?").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Ready to light the first fire for Chess? Let's take it one simple step at a time.").length
+    ).toBeGreaterThan(0);
   });
 
   it("shows the all-mastered message once everything is complete", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0, status: "mastered" })]);
     render(<MascotCompanion plan={plan} />);
-    expect(screen.getAllByText("The whole trail is glowing — you did it.").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("The whole trail is glowing! You’ve officially mastered Chess.").length
+    ).toBeGreaterThan(0);
   });
 
   it("shows the all-skipped message, matching the locked wording for this empty state", () => {
@@ -79,6 +83,6 @@ describe("MascotCompanion", () => {
   it("shows the celebration copy when celebrating", () => {
     const plan = makePlan([makeTechnique({ id: "t0", order: 0 })]);
     render(<MascotCompanion plan={plan} celebrating />);
-    expect(screen.getAllByText("Nice — that's one more in the bag.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Boom! Just mastered a Chess technique. Keep it up!").length).toBeGreaterThan(0);
   });
 });

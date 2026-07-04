@@ -42,4 +42,16 @@ describe("HobbyInputScreen", () => {
     await user.click(continueButton);
     expect(onNext).toHaveBeenCalledWith("Chess");
   });
+
+  it("keeps Continue disabled and shows an inline warning for keyboard-mash input", async () => {
+    const user = userEvent.setup();
+    const onNext = vi.fn();
+    render(<HobbyInputScreen initialValue="" onNext={onNext} onBack={vi.fn()} />);
+
+    await user.type(screen.getByRole("textbox"), "asdkjqwe123!!!");
+
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByText(/doesn't look like a hobby/i)).toBeInTheDocument();
+    expect(onNext).not.toHaveBeenCalled();
+  });
 });

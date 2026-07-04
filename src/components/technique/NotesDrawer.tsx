@@ -16,10 +16,14 @@ interface NotesDrawerProps {
   setOpenNoteId: (id: string | null) => void;
 }
 
-// Slides in from the right, covering roughly a third of the page — wide
-// enough to read comfortably without fully hiding the content the notes
-// are about. A plain transform-based panel (not a nested Base UI Drawer)
-// keeps this independent of whatever tab/section is active underneath.
+// Desktop (sm+): slides in from the right, covering roughly a third of the
+// page — wide enough to read comfortably without fully hiding the content
+// the notes are about. Mobile: a true bottom sheet (slides up, capped at
+// 85dvh, rounded top edge) instead of a full-screen right-side overlay — the
+// same transform-based panel just swaps which edge/axis it animates from
+// per breakpoint. A plain transform-based panel (not a nested Base UI
+// Drawer) keeps this independent of whatever tab/section is active
+// underneath.
 export function NotesDrawer({ isOpen, notes, onClose, onAdd, onUpdate, onRemove, openNoteId, setOpenNoteId }: NotesDrawerProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -55,8 +59,8 @@ export function NotesDrawer({ isOpen, notes, onClose, onAdd, onUpdate, onRemove,
         aria-hidden="true"
       />
       <div
-        className={`fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface-1 shadow-2xl transition-transform duration-200 sm:w-[35%] sm:min-w-[380px] ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed left-0 right-0 bottom-0 z-50 flex max-h-[85dvh] w-full flex-col rounded-t-2xl border-t border-border bg-surface-1 shadow-2xl transition-transform duration-200 sm:left-auto sm:top-0 sm:max-h-none sm:w-[35%] sm:min-w-[380px] sm:rounded-t-none sm:border-t-0 sm:border-l ${
+          isOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
         }`}
         aria-hidden={!isOpen}
       >

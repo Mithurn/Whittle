@@ -2,22 +2,37 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Flame, Play, Info, CheckCircle, AlertTriangle, BookOpen, Edit3, Plus, Headphones, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import Lottie from "lottie-react";
 import { usePlanStore } from "@/store/plan-store";
 import { categorizeResources } from "@/lib/technique-tabs";
-import { VideoSection } from "@/components/technique/TechniqueContent";
 import { MarkdownLite } from "@/components/MarkdownLite";
 import { ProsConsList } from "@/components/technique/ProsConsList";
 import { HowItWorksTimeline } from "@/components/technique/HowItWorksTimeline";
 import { NotesDrawer } from "@/components/technique/NotesDrawer";
-import { PodcastMode } from "@/components/technique/PodcastMode";
 import { SourceChip } from "@/components/technique/SourceChip";
 import { ImageCard } from "@/components/technique/ImageCard";
 
 import thinkingAnimation from "../../../../maskot/thinking.json";
+
+// lottie-react, the YouTube iframe embed, and the podcast iframe widget are
+// each only needed once the user actually swipes to a slide that renders
+// them — deferring them out of the page's initial bundle means someone who
+// only reads the Introduction and exits never pays for any of the three.
+// ssr:false on all three: this page's real content is already gated behind
+// a client-only hydration check (see the `!hydrated` early return below),
+// so there's no meaningful server-rendered output to preserve.
+const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
+const VideoSection = dynamic(
+  () => import("@/components/technique/TechniqueContent").then((mod) => mod.VideoSection),
+  { ssr: false }
+);
+const PodcastMode = dynamic(
+  () => import("@/components/technique/PodcastMode").then((mod) => mod.PodcastMode),
+  { ssr: false }
+);
 
 export default function TechniquePage() {
   const params = useParams<{ id: string }>();
@@ -47,7 +62,18 @@ export default function TechniquePage() {
   
   // Persist slide index across refreshes
   useEffect(() => {
-    if (!hydrated || !params?.id) return;
+    if (!hydrated || !technique || !params?.id) return;
+
+    if (technique.status === "skipped") {
+      // Skip is reversible, never framed as a dead end (per copy-guidelines)
+      // — and since the Skip button only exists on the last slide, "resuming"
+      // a skipped technique would otherwise always silently land back on
+      // the Complete-Lesson screen the user just declined. Force a fresh
+      // start at the Introduction instead.
+      sessionStorage.removeItem(`slideIndex-${params.id}`);
+      return;
+    }
+
     const saved = sessionStorage.getItem(`slideIndex-${params.id}`);
     if (saved !== null) {
       const parsed = parseInt(saved, 10);
@@ -56,7 +82,7 @@ export default function TechniquePage() {
         setSlideIndex(parsed);
       }
     }
-  }, [hydrated, params?.id]);
+  }, [hydrated, technique, params?.id]);
 
   useEffect(() => {
     if (hydrated && params?.id) {
@@ -188,7 +214,7 @@ export default function TechniquePage() {
             <span className="hidden sm:inline">Exit</span>
           </Link>
           <div className="flex-1" />
-          <span className="font-label text-sm font-semibold text-text-primary text-right truncate max-w-[150px] sm:max-w-xs">
+          <span className="font-label text-sm font-semibold text-text-primary text-right line-clamp-2 max-w-[150px] sm:max-w-xs">
             {technique.name}
           </span>
         </div>

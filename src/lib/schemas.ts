@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPlausibleHobbyName } from "./hobby-validation";
 
 // Hard input length caps — explicit named constants, not implicit limits.
 export const HOBBY_NAME_MAX = 60;
@@ -14,7 +15,12 @@ export const ResourceTypeSchema = z.enum(["video", "reading", "audio"]);
 
 // What the user submits from the onboarding form.
 export const GeneratePlanRequestSchema = z.object({
-  hobbyName: z.string().trim().min(1).max(HOBBY_NAME_MAX),
+  hobbyName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(HOBBY_NAME_MAX)
+    .refine(isPlausibleHobbyName, { message: "That doesn't look like a recognizable hobby name." }),
   level: SkillLevelSchema,
   goal: z.string().trim().min(1).max(GOAL_MAX),
   timeCommitment: z.string().trim().min(1).max(TIME_COMMITMENT_MAX),

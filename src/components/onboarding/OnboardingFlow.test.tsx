@@ -28,18 +28,19 @@ async function completeOnboardingUpToSubmit(user: ReturnType<typeof userEvent.se
   await user.type(screen.getByRole("textbox"), "Chess");
   await user.click(screen.getByRole("button", { name: "Continue" }));
 
+  // Skill level and time commitment auto-advance on selection — no Continue
+  // button to click. The next screen mounts ~180ms after the tap, so the
+  // following interaction waits for it via findByRole instead of getByRole.
   await user.click(screen.getByRole("radio", { name: /beginner/i }));
-  await user.click(screen.getByRole("button", { name: "Continue" }));
 
-  await user.type(screen.getByRole("textbox"), "Beat my dad at chess");
+  await user.type(await screen.findByRole("textbox"), "Beat my dad at chess");
   await user.click(screen.getByRole("button", { name: "Continue" }));
 
   await user.click(screen.getByRole("radio", { name: /a few hours a week/i }));
-  await user.click(screen.getByRole("button", { name: "Continue" }));
 
   // Known topics is optional — Continue with nothing typed submits an
   // empty list, matching the "should feel skippable" requirement.
-  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await user.click(await screen.findByRole("button", { name: "Continue" }));
 }
 
 describe("OnboardingFlow", () => {
@@ -85,13 +86,11 @@ describe("OnboardingFlow", () => {
     await user.type(screen.getByRole("textbox"), "Chess");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("radio", { name: /beginner/i }));
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await user.type(screen.getByRole("textbox"), "Beat my dad at chess");
+    await user.type(await screen.findByRole("textbox"), "Beat my dad at chess");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("radio", { name: /a few hours a week/i }));
-    await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    await user.type(screen.getByRole("textbox", { name: /add a topic/i }), "castling{enter}en passant{enter}");
+    await user.type(await screen.findByRole("textbox", { name: /add a topic/i }), "castling{enter}en passant{enter}");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(global.fetch).toHaveBeenCalledWith(

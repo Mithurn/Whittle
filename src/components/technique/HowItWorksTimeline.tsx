@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { Info } from "lucide-react";
 import { MarkdownLite } from "@/components/MarkdownLite";
 import { AnimatedList } from "@/components/ui/AnimatedList";
@@ -40,7 +39,6 @@ export function HowItWorksTimeline({ overview, steps }: HowItWorksTimelineProps)
       <AnimatedList
         items={steps}
         initialSelectedIndex={0}
-        displayScrollbar={false}
         renderItem={(step: Step, isSelected: boolean) => (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">

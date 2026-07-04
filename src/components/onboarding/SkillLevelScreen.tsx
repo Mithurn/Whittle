@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SignalLow, SignalMedium, SignalHigh, type LucideIcon } from "lucide-react";
 import { MascotWithSpeech } from "@/components/MascotWithSpeech";
 import { ProgressBar } from "./ProgressBar";
@@ -12,6 +12,11 @@ const SKILL_LEVELS: { value: SkillLevel; label: string; description: string; Ico
   { value: "advanced", label: "Advanced", description: "I'm comfortable with most of it", Icon: SignalHigh },
 ];
 
+// Long enough to perceive the tap registered (the option's border/icon
+// highlight) before the screen transitions away, short enough not to read
+// as added friction.
+const AUTO_ADVANCE_DELAY_MS = 180;
+
 interface SkillLevelScreenProps {
   initialValue?: SkillLevel;
   onNext: (level: SkillLevel) => void;
@@ -20,6 +25,19 @@ interface SkillLevelScreenProps {
 
 export function SkillLevelScreen({ initialValue, onNext, onBack }: SkillLevelScreenProps) {
   const [selected, setSelected] = useState<SkillLevel | undefined>(initialValue);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const advanceTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    return () => clearTimeout(advanceTimeout.current);
+  }, []);
+
+  function handleSelect(value: SkillLevel) {
+    if (isAdvancing) return;
+    setSelected(value);
+    setIsAdvancing(true);
+    advanceTimeout.current = setTimeout(() => onNext(value), AUTO_ADVANCE_DELAY_MS);
+  }
 
   return (
     <div className="flex flex-col min-h-dvh bg-background w-full">
@@ -53,7 +71,7 @@ export function SkillLevelScreen({ initialValue, onNext, onBack }: SkillLevelScr
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
-                onClick={() => setSelected(value)}
+                onClick={() => handleSelect(value)}
                 className={`
                   flex items-center gap-4 w-full text-left
                   bg-surface-2 border-2 rounded-xl px-5 py-4
@@ -71,28 +89,6 @@ export function SkillLevelScreen({ initialValue, onNext, onBack }: SkillLevelScr
             );
           })}
         </div>
-      </div>
-
-      {/* ── Footer / CTA ── */}
-      <div className="px-5 pb-8 pt-4 max-w-sm w-full mx-auto self-center">
-        <button
-          onClick={() => selected && onNext(selected)}
-          disabled={!selected}
-          className="
-            w-full py-4 rounded-[18px]
-            bg-gradient-to-r from-cta-start via-cta-mid to-cta-end
-            font-label text-base font-semibold tracking-wide text-cta-foreground
-            shadow-[0_0_12px_rgba(198,105,0,0.3)]
-            hover:shadow-[0_0_20px_rgba(198,105,0,0.5)]
-            hover:scale-[1.02]
-            active:scale-[0.98]
-            transition-all duration-150 ease-out
-            disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body
-          "
-        >
-          Continue
-        </button>
       </div>
     </div>
   );

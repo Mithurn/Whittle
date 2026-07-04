@@ -1,9 +1,7 @@
 "use client";
 
-import { Headphones, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Headphones, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { motion } from "motion/react";
 
 interface PodcastModeProps {
   audioResource?: {
@@ -83,34 +81,14 @@ export function PodcastMode({ audioResource }: PodcastModeProps) {
               className={`absolute inset-0 w-full h-full z-10 transition-opacity duration-1000 ${isIframeLoading ? 'opacity-0' : 'opacity-100'}`}
             ></iframe>
           </div>
-
-          {/* Minimal Source Link */}
-          <div className="flex justify-end px-2">
-            <Link 
-              href={url}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs font-label font-medium text-text-muted hover:text-primary transition-colors"
-            >
-              Listen natively on {platform} <ExternalLink size={12} />
-            </Link>
-          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[400px] text-center max-w-md mx-auto rounded-2xl border border-border/40 bg-surface-1/50">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            <Headphones size={28} className="text-primary" />
+            <AlertCircle size={28} className="text-text-muted opacity-50" />
           </div>
           <h3 className="text-xl font-heading font-bold text-text-primary mb-3 line-clamp-2 px-6">{title}</h3>
-          <p className="text-text-muted mb-8 px-8">This specific podcast couldn&apos;t be embedded, but you can listen to it directly on the web.</p>
-          <Link 
-            href={url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 bg-primary text-background font-label font-bold hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-all"
-          >
-            Open Podcast <ExternalLink size={18} />
-          </Link>
+          <p className="text-text-muted px-8">Audio not available for this technique right now.</p>
         </div>
       )}
     </div>

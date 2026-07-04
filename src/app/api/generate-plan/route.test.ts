@@ -106,6 +106,13 @@ describe("POST /api/generate-plan", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a gibberish hobbyName without calling any provider", async () => {
+    global.fetch = vi.fn() as unknown as typeof fetch;
+    const res = await POST(makeRequest({ ...validRequestBody, hobbyName: "asdkjqwe123!!!" }));
+    expect(res.status).toBe(400);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("falls back to constructSearchUrl when Serper fails or times out", async () => {
     global.fetch = vi.fn(async (url: string | URL | Request) => {
       const urlStr = String(url);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useInView } from 'motion/react';
+import { motion } from 'motion/react';
 
 interface AnimatedItemProps {
   children: React.ReactNode;
@@ -30,11 +30,9 @@ const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }: Ani
 export interface AnimatedListProps<T> {
   items: T[];
   onItemSelect?: (item: T, index: number) => void;
-  showGradients?: boolean;
   enableArrowNavigation?: boolean;
   className?: string;
   itemClassName?: string;
-  displayScrollbar?: boolean;
   initialSelectedIndex?: number;
   renderItem: (item: T, isSelected: boolean) => React.ReactNode;
 }
@@ -42,19 +40,15 @@ export interface AnimatedListProps<T> {
 export function AnimatedList<T>({
   items,
   onItemSelect,
-  showGradients = true,
   enableArrowNavigation = true,
   className = '',
   itemClassName = '',
-  displayScrollbar = false,
   initialSelectedIndex = -1,
   renderItem
 }: AnimatedListProps<T>) {
   const listRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
   const [keyboardNav, setKeyboardNav] = useState(false);
-  const [topGradientOpacity, setTopGradientOpacity] = useState(0);
-  const [bottomGradientOpacity, setBottomGradientOpacity] = useState(1);
 
   const handleItemMouseEnter = useCallback((index: number) => {
     setSelectedIndex(index);
@@ -69,14 +63,6 @@ export function AnimatedList<T>({
     },
     [onItemSelect]
   );
-
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const { scrollTop, scrollHeight, clientHeight } = target;
-    setTopGradientOpacity(Math.min(scrollTop / 50, 1));
-    const bottomDistance = scrollHeight - (scrollTop + clientHeight);
-    setBottomGradientOpacity(scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1));
-  }, []);
 
   useEffect(() => {
     if (!enableArrowNavigation) return;
@@ -124,14 +110,6 @@ export function AnimatedList<T>({
     }
     setKeyboardNav(false);
   }, [selectedIndex, keyboardNav]);
-
-  // If items length changes, reset scroll gradients
-  useEffect(() => {
-    if (listRef.current) {
-      const { scrollHeight, clientHeight } = listRef.current;
-      setBottomGradientOpacity(scrollHeight <= clientHeight ? 0 : 1);
-    }
-  }, [items]);
 
   return (
     <div className={`relative w-full ${className}`}>

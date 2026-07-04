@@ -42,6 +42,25 @@ export default function TechniquePage() {
   const [fetchState, setFetchState] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  
+  // Persist slide index across refreshes
+  useEffect(() => {
+    if (!hydrated || !params?.id) return;
+    const saved = sessionStorage.getItem(`slideIndex-${params.id}`);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSlideIndex(parsed);
+      }
+    }
+  }, [hydrated, params?.id]);
+
+  useEffect(() => {
+    if (hydrated && params?.id) {
+      sessionStorage.setItem(`slideIndex-${params.id}`, slideIndex.toString());
+    }
+  }, [slideIndex, hydrated, params?.id]);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
 
   const { video, reading, audio } = useMemo(() => {
@@ -348,9 +367,14 @@ export default function TechniquePage() {
             {currentSlide.id === "master" && (
               <div className="flex flex-col gap-8 py-6">
                 <div className="text-center flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-6">
-                    <CheckCircle size={32} strokeWidth={2.5} />
-                  </div>
+                  <motion.div 
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.2 }}
+                    className="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/10"
+                  >
+                    <CheckCircle size={40} strokeWidth={2.5} />
+                  </motion.div>
                   <h1 className="font-heading text-3xl font-bold text-text-primary mb-3">Nice work — ready to lock this in?</h1>
                   <p className="font-sans text-base text-text-muted max-w-md mx-auto">
                     Jot down anything that clicked — future you will thank you.
@@ -367,30 +391,34 @@ export default function TechniquePage() {
                     </h2>
                     <ul className="flex flex-col gap-2 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
                       {technique.lesson.keyTakeaways.map((point, idx) => (
-                        <li key={idx} className="flex items-start gap-3 font-sans text-sm text-text-muted">
-                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <CheckCircle size={12} strokeWidth={3} aria-hidden="true" />
-                          </span>
-                          {point}
+                        <li key={idx} className="group flex items-start justify-between gap-3 font-sans text-sm text-text-muted">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <CheckCircle size={12} strokeWidth={3} aria-hidden="true" />
+                            </span>
+                            <span className="[&_p]:m-0">
+                              <MarkdownLite text={point} />
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addTechniqueNote(technique.id, {
+                                title: "Key Takeaway",
+                                description: point,
+                              });
+                              setIsNotesOpen(true);
+                            }}
+                            title="Add to Notes"
+                            className="flex shrink-0 items-center justify-center rounded-full p-1 text-text-muted transition-all hover:bg-surface-3 hover:text-primary sm:p-1.5"
+                          >
+                            <Plus size={14} />
+                          </button>
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
-
-                {/* Lightweight, template-driven practice nudge — no extra AI
-                    call needed, just ties the lesson back to actually doing
-                    the hobby, not just consuming content (see decisions.md
-                    ideation on the lesson-structure redesign). */}
-                <div className="max-w-2xl mx-auto w-full px-2">
-                  <div className="rounded-2xl bg-surface-2 p-5 border border-border shadow-sm">
-                    <p className="font-label text-xs font-semibold uppercase tracking-wide text-primary mb-1.5">Try it</p>
-                    <p className="font-sans text-base text-text-primary">
-                      Next time you practice {currentPlan.hobbyName}, look for a real chance to use{" "}
-                      <span className="font-semibold">{technique.name}</span>.
-                    </p>
-                  </div>
-                </div>
 
                 <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full px-2">
                   <div className="flex items-center justify-between mb-1">
@@ -438,7 +466,9 @@ export default function TechniquePage() {
                 </div>
 
                 <div className="flex justify-center pt-4">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={handleMastered}
                     className="
@@ -446,14 +476,13 @@ export default function TechniquePage() {
                       bg-gradient-to-r from-cta-start via-cta-mid to-cta-end
                       font-label text-base font-semibold tracking-wide text-cta-foreground
                       shadow-[0_0_12px_rgba(198,105,0,0.3)]
-                      hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(198,105,0,0.5)]
-                      active:scale-[0.98]
-                      transition-all duration-150 ease-out
+                      hover:shadow-[0_0_20px_rgba(198,105,0,0.5)]
+                      transition-shadow duration-150 ease-out
                     "
                   >
                     <Flame size={18} aria-hidden="true" />
                     Complete Lesson
-                  </button>
+                  </motion.button>
                 </div>
 
                 <div className="flex justify-center">
@@ -500,11 +529,10 @@ export default function TechniquePage() {
               </button>
             </div>
 
-            {/* min-w-0 lets this shrink/truncate under pressure instead of
-                forcing the row wider than the viewport — the Back/Next
-                controls on either side are the ones that must never
-                disappear, so this is the one that gives up space first. */}
-            <div className="flex items-center gap-2 justify-center flex-1 min-w-0 px-2">
+            {/* Absolute positioning on md+ ensures it's perfectly centered 
+                regardless of side button widths. On mobile, we keep it in normal flow 
+                with flex-1 to prevent overlapping the buttons if space is tight. */}
+            <div className="flex items-center gap-2 justify-center flex-1 min-w-0 px-2 md:absolute md:left-1/2 md:-translate-x-1/2 pointer-events-none">
               {currentSlide.icon && <currentSlide.icon size={16} className="text-mascot-body shrink-0" />}
               <span className="font-label text-sm font-semibold text-text-primary truncate">{currentSlide.title}</span>
             </div>

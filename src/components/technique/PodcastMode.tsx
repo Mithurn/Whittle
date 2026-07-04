@@ -55,11 +55,9 @@ export function PodcastMode({ audioResource }: PodcastModeProps) {
   return (
     <div className="flex flex-col w-full h-full max-w-4xl mx-auto pt-2">
       {embedUrl ? (
-        <div className="flex flex-col gap-3">
-          {/* Increased height to 450px to naturally fit Apple's playlist without scrolling */}
-          <div className="relative w-full h-[450px] rounded-2xl overflow-hidden shadow-2xl border border-border/40 bg-surface-2 group ring-1 ring-white/5">
-            {/* Subtle Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-mascot-body/5 opacity-50 pointer-events-none" />
+        <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
+          {/* We just let the iframe render without an extra dark container around it */}
+          <div className="relative w-full h-[450px] rounded-2xl overflow-hidden">
             
             {/* Extended Loading Skeleton */}
             <div 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import { MarkdownLite } from "../MarkdownLite";
 
 // Replaces the old generic Advantages/Disadvantages framing — pros/cons is
 // a comparison-shopping frame, not a coaching frame, and didn't fit "how do
@@ -26,7 +27,9 @@ export function ProsConsList({ tips, mistakes }: ProsConsListProps) {
               <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
                 <Check size={12} strokeWidth={3} aria-hidden="true" />
               </span>
-              <span className="font-sans text-sm text-text-muted">{tip}</span>
+              <span className="font-sans text-sm text-text-muted [&_p]:m-0">
+                <MarkdownLite text={tip} />
+              </span>
             </li>
           ))}
         </ul>
@@ -40,7 +43,9 @@ export function ProsConsList({ tips, mistakes }: ProsConsListProps) {
               <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-500">
                 <X size={12} strokeWidth={3} aria-hidden="true" />
               </span>
-              <span className="font-sans text-sm text-text-muted">{mistake}</span>
+              <span className="font-sans text-sm text-text-muted [&_p]:m-0">
+                <MarkdownLite text={mistake} />
+              </span>
             </li>
           ))}
         </ul>

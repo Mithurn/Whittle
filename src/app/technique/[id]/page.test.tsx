@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import TechniquePage from "./page";
 import { usePlanStore } from "@/store/plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";
@@ -92,6 +92,7 @@ async function goToSlide(user: ReturnType<typeof userEvent.setup>, times: number
 describe("TechniquePage", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     pushMock.mockClear();
     currentParamId = "t0";
     usePlanStore.setState({ currentPlan: null, celebratingTechniqueId: null });

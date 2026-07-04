@@ -160,7 +160,25 @@ export async function enrichPlanWithSerper(
           }
           readingCount++;
         } else if (res.type === "audio") {
-          if (!audioResults) audioResults = await callSerper(`${technique.name} ${hobbyName} podcast (site:open.spotify.com/episode OR site:podcasts.apple.com OR site:soundcloud.com)`, "search");
+          if (!audioResults) {
+            audioResults = await callSerper(
+              `${technique.name} ${hobbyName} podcast episode (site:open.spotify.com/episode OR site:podcasts.apple.com OR site:soundcloud.com)`,
+              "search"
+            );
+            // A podcast episode about one specific technique (e.g. "the
+            // fork" in chess) is rare — most hobby podcasts talk about the
+            // hobby broadly, not a single technique. Falling back to a
+            // hobby-level query (still platform-restricted, so still
+            // embeddable) finds a real, relevant episode far more often
+            // than the narrow query alone, instead of falling all the way
+            // to the non-embeddable YouTube search-results page below.
+            if (!audioResults || audioResults.length === 0) {
+              audioResults = await callSerper(
+                `${hobbyName} podcast (site:open.spotify.com/episode OR site:podcasts.apple.com OR site:soundcloud.com)`,
+                "search"
+              );
+            }
+          }
           if (audioResults && audioResults.length > audioCount) {
             finalUrl = audioResults[audioCount].url;
             finalTitle = audioResults[audioCount].title;

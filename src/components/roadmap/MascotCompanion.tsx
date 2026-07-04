@@ -17,26 +17,23 @@ interface MascotCompanionProps {
 }
 
 const MESSAGES_IN_PROGRESS = [
-  "Keep the fire alive.",
-  "One more spark.",
-  "You're building momentum.",
-  "This trail is getting warmer.",
+  (remaining: number, hobby: string) => `You're only ${remaining} steps away from mastering ${hobby}. You've got this!`,
+  (_: number, hobby: string) => `Every technique you learn makes ${hobby} that much more fun.`,
+  (_: number, hobby: string, pct: number) => `You're ${pct}% of the way through ${hobby}. The momentum is real!`,
+  (_: number, hobby: string) => `I'm keeping the fire warm. Ready for your next ${hobby} lesson?`,
 ];
-const MESSAGE_NOT_STARTED = "Ready to light the first fire?";
-const MESSAGE_ALL_MASTERED = "The whole trail is glowing — you did it.";
-// Locked wording for this exact empty state — 0% here means opted out of
-// everything, not "hasn't started yet".
-const MESSAGE_ALL_SKIPPED = "You've skipped everything in this plan — want to start fresh?";
-// Short and specific to the moment, not generic praise.
-const MESSAGE_CELEBRATING = "Nice — that's one more in the bag.";
 
-function pickMessage(progress: ReturnType<typeof getProgress>): string {
-  if (progress.total === 0) return MESSAGE_ALL_SKIPPED;
-  if (progress.percentage === 100) return MESSAGE_ALL_MASTERED;
-  if (progress.mastered === 0) return MESSAGE_NOT_STARTED;
+function pickMessage(progress: ReturnType<typeof getProgress>, hobbyName: string, celebrating: boolean): string {
+  if (progress.total === 0) return "You've skipped everything in this plan — want to start fresh?";
+  if (celebrating) return `Boom! Just mastered a ${hobbyName} technique. Keep it up!`;
+  if (progress.percentage === 100) return `The whole trail is glowing! You’ve officially mastered ${hobbyName}.`;
+  if (progress.mastered === 0) return `Ready to light the first fire for ${hobbyName}? Let's take it one simple step at a time.`;
+  
   // Rotates off real mastered count, not a timer — changes only when
   // progress actually changes, never on an ambient loop.
-  return MESSAGES_IN_PROGRESS[progress.mastered % MESSAGES_IN_PROGRESS.length];
+  const remaining = progress.total - progress.mastered;
+  const msgFn = MESSAGES_IN_PROGRESS[progress.mastered % MESSAGES_IN_PROGRESS.length];
+  return msgFn(remaining, hobbyName, progress.percentage);
 }
 
 // idle = default/current, success = everything mastered OR the one-shot
@@ -58,7 +55,7 @@ function pickMascotState(progress: ReturnType<typeof getProgress>, celebrating: 
 export function MascotCompanion({ plan, celebrating = false, onCelebrationEnd }: MascotCompanionProps) {
   const progress = getProgress(plan);
   const mascotState = pickMascotState(progress, celebrating);
-  const speech = celebrating ? MESSAGE_CELEBRATING : pickMessage(progress);
+  const speech = pickMessage(progress, plan.hobbyName, celebrating);
   // Only the celebration plays once — every other state keeps looping as before.
   const loop = !celebrating;
   const onComplete = celebrating ? onCelebrationEnd : undefined;

@@ -119,7 +119,11 @@ async function callCondenseModel(systemPrompt: string, userContent: string, sche
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[read-article] Groq API Error: ${res.status} ${res.statusText} - ${errText}`);
+      return null;
+    }
 
     const data = await res.json();
     devLog(schemaName, data.usage);

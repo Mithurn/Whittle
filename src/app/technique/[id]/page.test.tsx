@@ -63,9 +63,9 @@ function makePlan(techniques: Technique[]): HobbyPlan {
 }
 
 // The page fires a background JIT fetch for the lesson content (How it
-// Works / Pros & Cons / Summary) the moment it mounts, regardless of which
-// slide is showing — every test needs this stubbed so that fetch doesn't
-// reject unhandled or spam the console, even tests that never navigate to
+// Works / Watch Out For / Key Takeaways) the moment it mounts, regardless
+// of which slide is showing — every test needs this stubbed so that fetch
+// doesn't reject unhandled or spam the console, even tests that never navigate to
 // an AI-generated slide.
 function mockLessonFetch() {
   global.fetch = vi.fn().mockResolvedValue({
@@ -76,8 +76,9 @@ function mockLessonFetch() {
         overview: "Line up your piece so it threatens two targets at once.",
         steps: [{ title: "Spot the fork", text: "Look for two undefended pieces on one line." }],
       },
-      prosCons: { advantages: ["Wins material"], disadvantages: ["Needs a tactical eye"] },
-      summaryTable: { headers: ["Piece", "Best used"], rows: [["Knight", "Forking king and rook"]] },
+      images: [],
+      mistakesTips: { tips: ["Look two moves ahead"], mistakes: ["Forgetting to check for pins first"] },
+      keyTakeaways: ["A fork wins material by attacking two pieces at once"],
     }),
   }) as unknown as typeof fetch;
 }
@@ -170,7 +171,7 @@ describe("TechniquePage", () => {
     render(<TechniquePage />);
 
     await screen.findByRole("heading", { name: "Introduction" });
-    await goToSlide(user, 5);
+    await goToSlide(user, 4);
 
     await user.click(await screen.findByRole("button", { name: /complete lesson/i }));
 
@@ -185,7 +186,7 @@ describe("TechniquePage", () => {
     render(<TechniquePage />);
 
     await screen.findByRole("heading", { name: "Introduction" });
-    await goToSlide(user, 5);
+    await goToSlide(user, 4);
 
     await user.click(await screen.findByRole("button", { name: /skip this technique/i }));
 

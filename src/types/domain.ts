@@ -33,14 +33,27 @@ export interface LessonContent {
       text: string;
     }>;
   };
-  prosCons: {
-    advantages: string[];
-    disadvantages: string[];
+  // Images the model found in the source article, returned as their own
+  // structured field rather than embedded inline as markdown `![alt](url)`
+  // within prose — the old approach meant only one of four lesson fields
+  // ever actually ran through a markdown parser, so images (and any other
+  // markdown syntax) silently leaked as raw text in the other three.
+  images: Array<{
+    url: string;
+    caption: string;
+  }>;
+  // Replaces the old generic "prosCons" (advantages/disadvantages) — pros
+  // and cons is a comparison-shopping frame, not a coaching frame, and
+  // doesn't fit "how do I do this technique." Actionable tips and mistakes
+  // to avoid are the equivalent that's actually useful mid-practice.
+  mistakesTips: {
+    tips: string[];
+    mistakes: string[];
   };
-  summaryTable: {
-    headers: string[];
-    rows: string[][];
-  };
+  // Replaces the old standalone "summaryTable" slide — a short recap
+  // folded into the Master slide alongside the mastery action, instead of
+  // a generic data table shown as its own disconnected step.
+  keyTakeaways: string[];
 }
 
 export interface Technique {

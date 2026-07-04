@@ -25,8 +25,9 @@ const validContext: RequestContext = { hobbyName: "Chess", level: "beginner", te
 const validLesson = {
   intro: "A quick intro to forking.",
   howItWorks: { overview: "Line up your piece.", steps: [{ title: "Spot it", text: "Look for two targets." }] },
-  prosCons: { advantages: ["Wins material"], disadvantages: ["Needs practice"] },
-  summaryTable: { headers: ["Piece", "Use"], rows: [["Knight", "Forking"]] },
+  images: [],
+  mistakesTips: { tips: ["Look two moves ahead"], mistakes: ["Forgetting to check for pins first"] },
+  keyTakeaways: ["A fork wins material by attacking two pieces at once"],
 };
 
 interface CondenseRequestBody {

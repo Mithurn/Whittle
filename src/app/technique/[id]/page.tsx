@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Flame, Play, Info, CheckCircle, Table as TableIcon, BookOpen, Edit3, ExternalLink, Plus, Headphones, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Flame, Play, Info, CheckCircle, AlertTriangle, BookOpen, Edit3, Plus, Headphones, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Lottie from "lottie-react";
 import { usePlanStore } from "@/store/plan-store";
@@ -11,10 +11,11 @@ import { categorizeResources } from "@/lib/technique-tabs";
 import { VideoSection } from "@/components/technique/TechniqueContent";
 import { MarkdownLite } from "@/components/MarkdownLite";
 import { ProsConsList } from "@/components/technique/ProsConsList";
-import { SummaryTable } from "@/components/technique/SummaryTable";
 import { HowItWorksTimeline } from "@/components/technique/HowItWorksTimeline";
 import { NotesDrawer } from "@/components/technique/NotesDrawer";
 import { PodcastMode } from "@/components/technique/PodcastMode";
+import { SourceChip } from "@/components/technique/SourceChip";
+import { ImageCard } from "@/components/technique/ImageCard";
 
 import thinkingAnimation from "../../../../maskot/thinking.json";
 
@@ -51,15 +52,7 @@ export default function TechniquePage() {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <h1 className="font-heading text-3xl font-bold text-text-primary">{title}</h1>
       {showSource && reading.length > 0 && (
-        <a 
-          href={reading[0].url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 font-label text-xs font-semibold text-text-muted hover:bg-surface-3 hover:text-text-primary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
-        >
-          <ExternalLink size={12} />
-          Source: {reading[0].sourceName}
-        </a>
+        <SourceChip url={reading[0].url} sourceName={reading[0].sourceName} />
       )}
     </div>
   );
@@ -126,8 +119,7 @@ export default function TechniquePage() {
   if (video.length > 0) slides.push({ id: "video", title: "Watch & Learn", icon: Play });
   if (reading.length > 0) {
     slides.push({ id: "howItWorks", title: "How it Works", icon: BookOpen });
-    slides.push({ id: "prosCons", title: "Pros & Cons", icon: CheckCircle });
-    slides.push({ id: "summary", title: "Summary", icon: TableIcon });
+    slides.push({ id: "mistakesTips", title: "Watch Out For", icon: AlertTriangle });
   }
   
   if (audio.length > 0) {
@@ -164,7 +156,7 @@ export default function TechniquePage() {
   }
 
   // JIT Loading State for AI-generated slides (Slide 3+)
-  const needsAI = ["howItWorks", "prosCons", "summary", "podcast"].includes(currentSlide.id);
+  const needsAI = ["howItWorks", "mistakesTips", "podcast"].includes(currentSlide.id);
   const isAILoading = needsAI && (!technique.lesson || fetchState === "loading");
   const isAIError = needsAI && fetchState === "error";
 
@@ -206,6 +198,18 @@ export default function TechniquePage() {
             animate="center"
             exit="exit"
             transition={{ type: "spring", stiffness: 300, damping: 30, opacity: { duration: 0.2 } }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.6}
+            onDragEnd={(_, info) => {
+              const SWIPE_THRESHOLD = 50;
+              if (info.offset.x < -SWIPE_THRESHOLD) {
+                if (hasNext && !(needsAI && (isAILoading || isAIError))) paginate(1);
+              } else if (info.offset.x > SWIPE_THRESHOLD) {
+                if (hasPrev) paginate(-1);
+              }
+            }}
+            style={{ touchAction: "pan-y" }}
             className="w-full flex flex-col gap-6"
           >
             {currentSlide.id === "intro" && (
@@ -308,30 +312,27 @@ export default function TechniquePage() {
                         <MarkdownLite text={technique.lesson.howItWorks as unknown as string} />
                       </div>
                     ) : (
-                      <HowItWorksTimeline 
+                      <HowItWorksTimeline
                         overview={technique.lesson.howItWorks?.overview || ""}
                         steps={technique.lesson.howItWorks?.steps || []}
                       />
                     )}
+                    {technique.lesson.images && technique.lesson.images.length > 0 && (
+                      <div className="flex flex-col gap-4">
+                        {technique.lesson.images.map((image, idx) => (
+                          <ImageCard key={idx} url={image.url} caption={image.caption} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {currentSlide.id === "prosCons" && (
+                {currentSlide.id === "mistakesTips" && (
                   <div className="flex flex-col gap-6">
-                    {renderSlideHeader("Pros & Cons", true)}
-                    <ProsConsList 
-                      advantages={technique.lesson.prosCons?.advantages || []} 
-                      disadvantages={technique.lesson.prosCons?.disadvantages || []} 
-                    />
-                  </div>
-                )}
-
-                {currentSlide.id === "summary" && (
-                  <div className="flex flex-col gap-6">
-                    {renderSlideHeader("Key Takeaways", true)}
-                    <SummaryTable
-                      headers={technique.lesson.summaryTable?.headers || []}
-                      rows={technique.lesson.summaryTable?.rows || []}
+                    {renderSlideHeader("Watch Out For", true)}
+                    <ProsConsList
+                      tips={technique.lesson.mistakesTips?.tips || []}
+                      mistakes={technique.lesson.mistakesTips?.mistakes || []}
                     />
                   </div>
                 )}
@@ -350,12 +351,47 @@ export default function TechniquePage() {
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-6">
                     <CheckCircle size={32} strokeWidth={2.5} />
                   </div>
-                  <h1 className="font-heading text-3xl font-bold text-text-primary mb-3">Ready to Move On?</h1>
+                  <h1 className="font-heading text-3xl font-bold text-text-primary mb-3">Nice work — ready to lock this in?</h1>
                   <p className="font-sans text-base text-text-muted max-w-md mx-auto">
-                    Take a moment to write down what you learned. This helps solidify your understanding.
+                    Jot down anything that clicked — future you will thank you.
                   </p>
                 </div>
-                
+
+                {/* Folded in from the old standalone "Summary" slide — a
+                    short recap sitting right next to the mastery action
+                    instead of a disconnected table shown as its own step. */}
+                {technique.lesson?.keyTakeaways && technique.lesson.keyTakeaways.length > 0 && (
+                  <div className="flex flex-col gap-3 max-w-2xl mx-auto w-full px-2">
+                    <h2 className="font-heading text-lg font-bold text-text-primary">
+                      Key Takeaways
+                    </h2>
+                    <ul className="flex flex-col gap-2 rounded-2xl border border-border bg-surface-2 p-5 shadow-sm">
+                      {technique.lesson.keyTakeaways.map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-3 font-sans text-sm text-text-muted">
+                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <CheckCircle size={12} strokeWidth={3} aria-hidden="true" />
+                          </span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Lightweight, template-driven practice nudge — no extra AI
+                    call needed, just ties the lesson back to actually doing
+                    the hobby, not just consuming content (see decisions.md
+                    ideation on the lesson-structure redesign). */}
+                <div className="max-w-2xl mx-auto w-full px-2">
+                  <div className="rounded-2xl bg-surface-2 p-5 border border-border shadow-sm">
+                    <p className="font-label text-xs font-semibold uppercase tracking-wide text-primary mb-1.5">Try it</p>
+                    <p className="font-sans text-base text-text-primary">
+                      Next time you practice {currentPlan.hobbyName}, look for a real chance to use{" "}
+                      <span className="font-semibold">{technique.name}</span>.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full px-2">
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="font-heading text-lg font-bold text-text-primary">
@@ -452,24 +488,28 @@ export default function TechniquePage() {
           </div>
           
           <div className="flex items-center justify-between">
-            <div className="flex flex-1 justify-start">
+            <div className="flex shrink-0 justify-start">
               <button
                 type="button"
                 onClick={() => hasPrev && paginate(-1)}
                 disabled={!hasPrev}
-                className={`flex min-w-24 items-center gap-1.5 rounded-full px-3 py-2 font-label text-sm font-semibold transition-colors duration-150 ${!hasPrev ? 'opacity-0 pointer-events-none' : 'text-text-primary hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body'}`}
+                className={`flex shrink-0 min-w-11 items-center gap-1.5 rounded-full px-3 py-2 font-label text-sm font-semibold transition-colors duration-150 ${!hasPrev ? 'opacity-0 pointer-events-none' : 'text-text-primary hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body'}`}
               >
-                <ArrowLeft size={16} aria-hidden="true" />
+                <ArrowLeft size={16} aria-hidden="true" className="shrink-0" />
                 <span className="hidden sm:inline">Back</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-2 justify-center flex-1">
-              {currentSlide.icon && <currentSlide.icon size={16} className="text-mascot-body" />}
-              <span className="font-label text-sm font-semibold text-text-primary">{currentSlide.title}</span>
+            {/* min-w-0 lets this shrink/truncate under pressure instead of
+                forcing the row wider than the viewport — the Back/Next
+                controls on either side are the ones that must never
+                disappear, so this is the one that gives up space first. */}
+            <div className="flex items-center gap-2 justify-center flex-1 min-w-0 px-2">
+              {currentSlide.icon && <currentSlide.icon size={16} className="text-mascot-body shrink-0" />}
+              <span className="font-label text-sm font-semibold text-text-primary truncate">{currentSlide.title}</span>
             </div>
 
-            <div className="flex flex-1 items-center justify-end gap-1">
+            <div className="flex shrink-0 items-center justify-end gap-1">
               {/* Podcast quick-jump button */}
               {audio.length > 0 && currentSlide.id !== "podcast" && (
                 <button
@@ -483,35 +523,39 @@ export default function TechniquePage() {
                     }
                   }}
                   title="Go to Podcast Mode"
-                  className="flex items-center justify-center w-10 h-10 rounded-full text-primary hover:bg-primary/10 transition-colors mr-1 sm:mr-2"
+                  className="flex shrink-0 items-center justify-center w-10 h-10 rounded-full text-primary hover:bg-primary/10 transition-colors mr-1 sm:mr-2"
                 >
-                  <Headphones size={18} />
+                  <Headphones size={18} className="shrink-0" />
                 </button>
               )}
-              
+
               <button
                 type="button"
                 onClick={() => hasNext && paginate(1)}
                 disabled={!hasNext || (needsAI && (isAILoading || isAIError))}
-                className={`flex min-w-24 items-center justify-end gap-1.5 rounded-full px-3 py-2 font-label text-sm font-semibold transition-colors duration-150 ${!hasNext ? 'opacity-0 pointer-events-none' : 'text-primary hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body disabled:opacity-30 disabled:hover:bg-transparent'}`}
+                className={`flex shrink-0 min-w-11 items-center justify-end gap-1.5 rounded-full px-3 py-2 font-label text-sm font-semibold transition-colors duration-150 ${!hasNext ? 'opacity-0 pointer-events-none' : 'text-primary hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body disabled:opacity-30 disabled:hover:bg-transparent'}`}
               >
                 <span className="hidden sm:inline">Next</span>
-                {hasNext && <Play size={16} aria-hidden="true" />}
+                {hasNext && <Play size={16} aria-hidden="true" className="shrink-0" />}
+              </button>
+
+              {/* Notes — used to be a separate absolutely-positioned overlay
+                  anchored to the footer's bottom-right corner, which at
+                  narrow widths painted directly on top of the Next button
+                  (positioned elements always paint above normal-flow
+                  siblings, regardless of DOM order) and hid it completely.
+                  Now a normal flex item in the same shrink-0-protected
+                  group, so it can never overlap anything. */}
+              <button
+                type="button"
+                onClick={() => setIsNotesOpen(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1.5 font-label text-sm font-semibold text-text-primary transition-colors duration-150 hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body ml-1"
+              >
+                <Edit3 size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Notes</span>
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Far-right Notes Button */}
-        <div className="absolute right-4 sm:right-8 bottom-4 flex items-center">
-          <button
-            type="button"
-            onClick={() => setIsNotesOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1.5 font-label text-sm font-semibold text-text-primary transition-colors duration-150 hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
-          >
-            <Edit3 size={14} />
-            <span className="hidden sm:inline">Notes</span>
-          </button>
         </div>
       </div>
       

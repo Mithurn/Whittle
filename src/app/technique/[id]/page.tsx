@@ -123,9 +123,13 @@ export default function TechniquePage() {
       techniqueName: technique.name,
     });
 
-    fetch(`/api/read-article?${searchParams.toString()}`)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+    fetch(`/api/read-article?${searchParams.toString()}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
+        clearTimeout(timeoutId);
         if (data.error) {
           console.warn("[JIT Fetch Error]:", data.error);
           setFetchState("error");
@@ -135,9 +139,15 @@ export default function TechniquePage() {
         setFetchState("success");
       })
       .catch((err) => {
-        console.error(err);
+        clearTimeout(timeoutId);
+        console.error("[JIT Fetch Error/Timeout]:", err);
         setFetchState("error");
       });
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [hydrated, technique, currentPlan, fetchState, reading, setTechniqueLesson]);
 
   if (!hydrated) {
@@ -199,7 +209,7 @@ export default function TechniquePage() {
   }
 
   const needsAI = ["howItWorks", "mistakesTips", "podcast"].includes(currentSlide.id);
-  const isAILoading = needsAI && (!technique.lesson || fetchState === "loading");
+  const isAILoading = needsAI && !technique.lesson && fetchState !== "error";
   const isAIError = needsAI && fetchState === "error";
 
   return (
@@ -335,6 +345,13 @@ export default function TechniquePage() {
                     Read the source article directly
                   </a>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setFetchState("idle")}
+                  className="mt-4 rounded-md bg-mascot-body px-5 py-2.5 font-label text-sm font-semibold text-white transition-colors hover:bg-mascot-body/90 shadow-sm"
+                >
+                  Try again
+                </button>
               </div>
             )}
 

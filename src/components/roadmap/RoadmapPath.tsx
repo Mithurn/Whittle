@@ -86,7 +86,7 @@ export function RoadmapPath({ plan, isMobile, onNodeClick }: RoadmapPathProps) {
               {/* line-clamp-2: caps how much vertical rhythm one long AI
                   title can eat out of the path — the full name is still
                   readable in TechniqueModal once the node is tapped. */}
-              <span className="absolute left-1/2 top-full mt-3 line-clamp-2 max-w-[140px] -translate-x-1/2 text-center font-sans text-xs text-text-muted md:max-w-[180px]">
+              <span title={entry.node.technique.name} className="absolute left-1/2 top-full mt-3 line-clamp-2 max-w-[140px] -translate-x-1/2 text-center font-sans text-xs text-text-muted md:max-w-[180px]">
                 {entry.node.technique.name}
               </span>
             </div>

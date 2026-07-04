@@ -20,7 +20,7 @@
   <a href="#live-demo--walkthrough">Live Demo</a> •
   <a href="#merylls-learning-philosophy">Meryll's Philosophy</a> •
   <a href="#key-features">Key Features</a> •
-  <a href="#recent-fixes--polish">Recent Fixes</a> •
+  <a href="#recent-uiux-fixes">Recent UI/UX Fixes</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#running-locally">Running Locally</a>
 </p>
@@ -37,15 +37,18 @@ There are no accounts and no backend database. A single-user, no-history hobby t
 
 ## Meryll's Learning Philosophy
 
-Whittle is heavily inspired by a pedagogy and design philosophy that values intrinsic motivation and actionable learning.
+Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which values **intrinsic motivation and actionable, structured learning** over cheap dopamine. 
 
-1. **The 5-Step Lesson Structure:** We don't just dump links on you. Every technique is broken down via Just-In-Time (JIT) AI generation into a strict, digestible slide deck:
+1. **The 5-Step Lesson Structure:** We don't just dump external links on you. Every technique is broken down via Just-In-Time (JIT) AI generation into a strict, digestible slide deck:
    - **Introduction:** Why does this matter?
-   - **Watch & Learn:** High-quality Video & Audio (Podcast) resources.
-   - **How it Works:** Step-by-step breakdown.
-   - **Watch Out For:** Common mistakes & pro tips.
+   - **Watch & Learn:** High-quality Video & Audio (Podcast) resources embedded seamlessly.
+   - **How it Works:** Step-by-step breakdown distilled directly from real articles.
+   - **Watch Out For:** Common mistakes & pro tips (pros/cons).
    - **Master:** A final recap, key takeaways, and a place to jot down your notes.
-2. **Anti-Dark Patterns:** We completely reject cheap gamification. You will not find streaks, leaderboards, or arbitrary points economies here. Instead, we rely on a **rich, native reward loop**: physics-based micro-animations, tactile button bounces, and a dynamic Mascot companion who genuinely acknowledges your progress ("You're 2 steps away from mastering Pickleball!").
+2. **Anti-Dark Patterns & The Reward Loop:** We completely reject gamification. You will not find streaks, leaderboards, or arbitrary points economies here. Instead, we rely on a **rich, native reward loop**: 
+   - Physics-based micro-animations (e.g. spring-loaded checkmarks).
+   - Tactile button bounces and immediate visual feedback.
+   - A **dynamic Mascot companion** who genuinely acknowledges your exact progress (*"You're 2 steps away from mastering Pickleball!"*) rather than spouting generic praise.
 
 ## Live Demo & Walkthrough
 
@@ -61,19 +64,25 @@ Whittle is heavily inspired by a pedagogy and design philosophy that values intr
 - **Responsive technique detail** — desktop modal / mobile bottom sheet UI patterns that feel native.
 - **249 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
 
-## Recent Fixes & Polish (Post-Feedback)
+## Recent UI/UX Fixes (Post-Feedback)
 
-We recently underwent a massive polish pass to ensure the app hits a 10/10 standard:
+We recently underwent a massive polish pass to ensure the app hits a native, premium standard:
+- **In-App Native Content:** We eliminated the horrible experience of kicking users out to external links. Video resources now play inside a native YouTube iframe embed, and Audio resources play inside a custom Podcast widget (`PodcastMode.tsx`).
 - **Persistent Slide Indexing:** The exact slide you are on inside a lesson is now cached in `sessionStorage`. If you accidentally refresh or close your phone, you resume exactly where you were.
-- **JIT Fetching Pipeline:** Lessons (Key Takeaways, Mistakes, Steps) are generated Just-In-Time as soon as you open a technique, creating a seamless UX without blocking the initial plan generation.
+- **JIT Fetching Pipeline:** Lessons (Key Takeaways, Mistakes, Steps) are generated Just-In-Time as soon as you open a technique, completely eliminating blocking wait times during the initial plan generation.
 - **Improved Podcast Matching:** Added explicit "episode" constraints to our audio Serper queries, ensuring you get actual playable podcasts instead of generic search pages.
-- **Rich Reward Loop:** Final slides now pop with spring animations, and the "Complete Lesson" button provides tactile bounce feedback.
-- **Layout & Mobile UI:** Completely eliminated layout shifts during JIT loading, centered footer navigations perfectly across all breakpoints, and stripped excess padding from podcast embeds for a cleaner UI.
-- **Integrated Lesson Notes:** Easily add any Key Takeaway directly to your personal notes with a single click.
+- **Light Theme & Contrast:** Ensured the default theme is a beautiful light mode ("Daylight Campfire"), completely rebuilt the Progress Bar UI to blend seamlessly, and prevented dark mode from masking important UI elements.
+- **Layout & Mobile UI:** Completely eliminated layout shifts during JIT loading and centered footer navigations perfectly across all breakpoints.
 
 ## Architecture
 
-A decoupled two-pass pipeline: one pass invents the *plan* (Groq, from its own reasoning), a second pass finds *real, currently-live links* for it (Serper.dev) — deliberately separating "what should this plan contain" from "what real page backs each resource."
+We use a decoupled multi-pass pipeline powered by **Groq (`gpt-oss-120b`)** for lightning-fast AI reasoning, **Serper.dev** for live Google Search grounding, and **Jina Reader** for real-time web scraping.
+
+### Pass 1: Plan Generation (`/api/generate-plan`)
+One pass invents the *plan* (Groq), a second pass finds *real, currently-live links* for it (Serper.dev) — deliberately separating "what should this plan contain" from "what real page backs each resource."
+
+### Pass 2: JIT Lesson Generation (`/api/read-article`)
+When you click a lesson, we immediately scrape the article URL using the **Jina Reader API**. We then feed that raw text back to **Groq** via two highly-specific, parallel prompts to extract the Step-by-Step Breakdown and the Coaching Tips. 
 
 ```mermaid
 graph TB
@@ -82,9 +91,11 @@ graph TB
         C[Roadmap / Technique UI] <--> D[(Zustand Store)]
         D <--> E[(localStorage)]
         B -.plan JSON.-> D
+        C -->|GET| M["/api/read-article"]
+        M -.lesson JSON.-> C
     end
 
-    subgraph API["Route Handler — /api/generate-plan"]
+    subgraph API1["Route Handler — /api/generate-plan"]
         B --> F["Pass 1 — Groq gpt-oss-120b<br/>JSON skeleton: techniques, resource titles,<br/>every url = placeholder"]
         F --> G{Zod validation}
         G -->|fails once| F
@@ -92,14 +103,26 @@ graph TB
         G -->|valid| I["Pass 2 — Serper.dev<br/>parallel per-resource search"]
         I --> J["Real result found?<br/>trust it, keep its title too"]
         I --> K["No result / timeout (5s)?<br/>constructSearchUrl fallback"]
-        J --> L["Post-pass dedup:<br/>2nd occurrence of any URL →<br/>constructSearchUrl instead"]
+        J --> L["Post-pass dedup:<br/>cleanup duplicate URLs"]
         K --> L
         L --> B
+    end
+
+    subgraph API2["Route Handler — /api/read-article"]
+        M --> N["Scrape URL with Jina Reader API"]
+        N -->|Success/Fallback| O["Parallel Groq Passes"]
+        O --> P["generateLessonBreakdown"]
+        O --> Q["generateLessonCoaching"]
+        P --> R["Merge JSON & Return"]
+        Q --> R
+        R --> M
     end
 
     style F fill:#EB8928,color:#111318
     style I fill:#FABA0E,color:#111318
     style H fill:#ffb4ab,color:#111318
+    style N fill:#00bfff,color:#111318
+    style O fill:#EB8928,color:#111318
 ```
 
 ## Running Locally

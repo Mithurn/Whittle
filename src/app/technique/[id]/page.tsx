@@ -124,7 +124,7 @@ export default function TechniquePage() {
     });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout, just under Vercel's 60s limit
 
     fetch(`/api/read-article?${searchParams.toString()}`, { signal: controller.signal })
       .then((res) => res.json())

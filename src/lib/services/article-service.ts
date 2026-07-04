@@ -79,16 +79,17 @@ function buildCoachingPrompt(hobbyName: string, level: SkillLevel, techniqueName
   let prompt = describeModule(hobbyName, level, techniqueName);
 
   prompt += hasSource
-    ? `You will be provided with a raw, scraped web article about this technique. Use it to ground your advice in real practice. `
+    ? `You will be provided with a raw, scraped web article about this technique. Use it to ground your advice in real practice. ` +
+      `CRITICAL RULE: If the article lacks explicit tips, mistakes, or takeaways (or if the text is blocked/empty), YOU MUST use your own expert knowledge to generate them. `
     : `Use your own expert knowledge of this technique. `;
 
   prompt += `You MUST return your response as a valid JSON object with the following exact structure:\n` +
     `{\n` +
     `  "mistakesTips": {\n` +
-    `    "tips": ["An actionable pro tip", "Another actionable pro tip"],\n` +
-    `    "mistakes": ["A common mistake beginners make", "Another common mistake"]\n` +
+    `    "tips": ["An actionable pro tip", "Another actionable pro tip"], // Must contain AT LEAST 2 items. NEVER return an empty array.\n` +
+    `    "mistakes": ["A common mistake beginners make", "Another common mistake"] // Must contain AT LEAST 2 items. NEVER return an empty array.\n` +
     `  },\n` +
-    `  "keyTakeaways": ["A short, memorable recap point", "Another recap point"]\n` +
+    `  "keyTakeaways": ["A short, memorable recap point", "Another recap point"] // Must contain AT LEAST 2 items. NEVER return an empty array.\n` +
     `}\n` +
     `Output ONLY the JSON object. Do not include markdown code blocks around the JSON.`;
 

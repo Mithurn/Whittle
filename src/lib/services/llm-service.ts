@@ -123,9 +123,9 @@ const SEQUENCING_RULE =
   `the prerequisite skills it depends on. Each technique should build on the ones before it.`;
 
 const RESOURCE_MIX_RULE =
-  `Each technique must have exactly 3 resources: one video, one reading/article, and one additional resource ` +
-  `(either audio or another reading/article, whichever fits the technique better) — never audio-only for a ` +
-  `technique that requires seeing physical form.`;
+  `Each technique must have exactly 3 resources: one video, one reading/article, and one audio/podcast. ` +
+  `Never substitute the audio resource for a second reading, and never use audio-only for a ` +
+  `technique that requires seeing physical form (that's what the video is for).`;
 
 const SKILL_LEVEL_RULES: Record<SkillLevel, string> = {
   beginner:

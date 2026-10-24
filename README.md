@@ -62,7 +62,7 @@ Whittle is heavily inspired by Meryll's pedagogy and design philosophy, which va
 - **Dynamic Mascot Companion** — a character reacting to your specific progress, giving you personalized encouragement rather than generic praise.
 - **Mark Mastered / Skip** — skip is fully reversible via a dedicated "bring back" action.
 - **Native responsive overlays** — the Notes panel is a side panel on desktop and a true bottom sheet on mobile.
-- **281 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
+- **296 automated tests**, TypeScript strict mode, zero live API calls in the test suite (every provider call is mocked).
 
 ## Recent Fixes & Product Loop (Post-Feedback)
 
@@ -148,9 +148,19 @@ SERPER_API_KEY=your_key_here
 
 ```bash
 npm run dev      # start the dev server at localhost:3000
-npm test         # run the test suite (281 tests, fully mocked)
+npm test         # run the test suite (296 tests, fully mocked)
+npm run test:coverage  # same, with a coverage report
+npm run lint     # ESLint
+npx tsc --noEmit # type check
 npm run build    # production build
 ```
+
+## Contributing
+
+1. Branch from `main`.
+2. Make your change with tests next to the code (`*.test.ts(x)`); provider calls must be mocked.
+3. Make sure `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` pass. CI runs the same checks.
+4. Open a pull request. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the code layout.
 
 ## License
 

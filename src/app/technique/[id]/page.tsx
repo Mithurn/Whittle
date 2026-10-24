@@ -114,7 +114,6 @@ export default function TechniquePage() {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetchState("loading");
     const searchParams = new URLSearchParams({
       url: readingResource.url,

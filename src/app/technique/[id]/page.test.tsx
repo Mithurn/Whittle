@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import TechniquePage from "./page";
 import { usePlanStore } from "@/store/plan-store";
 import type { HobbyPlan, Technique } from "@/types/domain";

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { TypingText } from "./TypingText";
+import { WatchDemo } from "./WatchDemo";
 
 // See MascotWithSpeech.tsx — defers lottie-react out of the initial bundle
 // so the very first screen the user sees isn't blocked on it.
@@ -64,6 +65,9 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
         >
           Get Started
         </button>
+        <div className="mt-4 flex justify-center">
+          <WatchDemo />
+        </div>
       </div>
     </div>
   );

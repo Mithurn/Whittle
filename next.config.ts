@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return [{ source: "/landing", destination: "/landing/index.html" }];
+    return [{ source: "/", destination: "/landing/index.html" }];
   },
 };
 

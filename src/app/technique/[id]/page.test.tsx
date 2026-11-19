@@ -102,7 +102,7 @@ describe("TechniquePage", () => {
   it("shows a 'no plan found' fallback when there's no current plan", async () => {
     render(<TechniquePage />);
     expect(await screen.findByText("No plan found.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to your roadmap/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /back to your roadmap/i })).toHaveAttribute("href", "/start");
   });
 
   it("shows a 'couldn't find that technique' fallback when the id doesn't match any technique", async () => {
@@ -178,7 +178,7 @@ describe("TechniquePage", () => {
 
     expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("mastered");
     expect(usePlanStore.getState().celebratingTechniqueId).toBe("t0");
-    expect(pushMock).toHaveBeenCalledWith("/");
+    expect(pushMock).toHaveBeenCalledWith("/start");
   });
 
   it("marks the technique skipped and navigates back without triggering celebration", async () => {
@@ -193,7 +193,7 @@ describe("TechniquePage", () => {
 
     expect(usePlanStore.getState().currentPlan?.techniques[0].status).toBe("skipped");
     expect(usePlanStore.getState().celebratingTechniqueId).toBeNull();
-    expect(pushMock).toHaveBeenCalledWith("/");
+    expect(pushMock).toHaveBeenCalledWith("/start");
   });
 
   it("resumes at the saved slide position for a non-skipped technique", async () => {

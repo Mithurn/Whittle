@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
+
+const LANDING_PATH = "/";
 
 // Fixed top-right at every breakpoint — the one corner that's empty
 // regardless of page (onboarding hero, roadmap rail on the left, technique
@@ -12,6 +15,7 @@ import { Sun, Moon } from "lucide-react";
 // not a special exception the way the rail mascot is.
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -20,6 +24,8 @@ export function ThemeToggle() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  if (pathname === LANDING_PATH) return null;
 
   if (!mounted) {
     // Reserve the exact footprint so nothing shifts once it mounts.

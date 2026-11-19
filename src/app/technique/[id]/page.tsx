@@ -156,7 +156,7 @@ export default function TechniquePage() {
           {currentPlan ? "We couldn't find that technique." : "No plan found."}
         </p>
         <Link
-          href="/"
+          href="/start"
           className="min-h-11 rounded-md px-3 py-2 font-label text-sm font-semibold text-primary transition-colors duration-150 hover:text-mascot-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
         >
           Back to your roadmap
@@ -195,12 +195,12 @@ export default function TechniquePage() {
   function handleMastered() {
     updateTechniqueStatus(technique!.id, "mastered");
     triggerCelebration(technique!.id);
-    router.push("/");
+    router.push("/start");
   }
 
   function handleSkip() {
     updateTechniqueStatus(technique!.id, "skipped");
-    router.push("/");
+    router.push("/start");
   }
 
   const needsAI = ["howItWorks", "mistakesTips", "podcast"].includes(currentSlide.id);
@@ -212,7 +212,7 @@ export default function TechniquePage() {
       <div className="sticky top-0 z-30 bg-background/95 px-4 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-3xl items-center gap-3 pr-12">
           <Link
-            href="/"
+            href="/start"
             className="-ml-2 flex min-h-11 items-center gap-1.5 rounded-md px-2 font-label text-sm font-semibold text-text-muted transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mascot-body"
           >
             <ArrowLeft size={18} aria-hidden="true" />

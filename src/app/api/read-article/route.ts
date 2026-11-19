@@ -7,7 +7,7 @@ const FETCH_TIMEOUT_MS = 8000;
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::1"]);
 
-// Basic guard, not a full SSRF filter  — but this
+// Basic guard, not a full SSRF filter (no DNS-resolution check) — but this
 // route fetches an arbitrary caller-given URL server-side, so blocking the
 // cheap/obvious private-network literals is a real, not hypothetical,
 // hardening step for a route shaped exactly like an open proxy otherwise.

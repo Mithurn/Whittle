@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whittle: one hobby, one roadmap</title>
+<meta name="description" content="Pick one hobby and get a personalized roadmap of 5 to 8 techniques, each taught in 5 short slides. No accounts, no streaks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FDF8F3;--fg:#2B2016;--s1:#F5EDE4;--s2:#EFE3D5;--border:#E3D2BC;
+  --primary:#EB8928;--glow:#FABA0E;--gold:#FFC732;--cream:#FFF7D9;--muted:#6E5A4B;
+  --cta:linear-gradient(135deg,#C66900 0%,#EB8928 55%,#FABA0E 100%);
+  --on-cta:#180F05;
+  --display:'Bricolage Grotesque',Georgia,serif;--body:'Manrope',system-ui,sans-serif;--label:'Sora',system-ui,sans-serif;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --wrap:1180px;--pad:clamp(20px,5vw,56px);
+  --stage-h:clamp(520px,62vw,640px);
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+html{overflow-x:clip}body{background:var(--bg);color:var(--fg);font:400 1.0625rem/1.6 var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.35;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+img{display:block;max-width:100%}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--fg);outline-offset:3px;border-radius:6px}
+.wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:var(--pad)}
+.skip{position:absolute;left:12px;top:-60px;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:200;font-family:var(--label);font-weight:600}
+.skip:focus{top:12px}
+h1,h2,h3{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:1}
+h2{font-size:clamp(2.2rem,5vw,3.9rem);text-wrap:balance}
+.eyebrow{font:700 .78rem/1 var(--label);letter-spacing:.14em;text-transform:uppercase;color:#9A5200;display:inline-flex;gap:10px;align-items:center;margin-bottom:20px}
+.eyebrow::before{content:"";width:28px;height:2px;background:currentColor;border-radius:2px}
+.lede{color:var(--muted);max-width:52ch;margin-top:20px}
+
+.btn{display:inline-flex;align-items:center;gap:10px;font:700 1rem/1 var(--label);color:var(--on-cta);background:var(--cta);text-decoration:none;padding:18px 28px;border-radius:14px;border:0;cursor:pointer;
+  box-shadow:0 1px 0 #FFE9A8 inset,0 -3px 0 rgba(120,60,0,.28) inset,0 10px 24px -8px rgba(198,105,0,.55);
+  transition:transform .35s var(--spring),box-shadow .2s}
+.btn:hover{transform:translateY(-3px) rotate(-.6deg)}
+.btn:active{transform:translateY(2px) scale(.97);box-shadow:0 1px 0 #FFE9A8 inset,0 -1px 0 rgba(120,60,0,.28) inset,0 4px 10px -4px rgba(198,105,0,.5)}
+.btn svg{transition:transform .35s var(--spring)}
+.btn:hover svg{transform:translateX(4px)}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 2px var(--fg)}
+.btn.small{padding:12px 18px;font-size:.9rem;border-radius:11px}
+
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;padding-block:22px}
+.logo{display:flex;align-items:center;gap:10px;font:800 1.55rem/1 var(--display);letter-spacing:-.04em;text-decoration:none}
+.logo i{width:26px;height:26px;display:block}
+
+/* hero */
+.hero{position:relative;padding-block:clamp(28px,5vw,64px) clamp(56px,8vw,110px)}
+.hero::before{content:"";position:absolute;right:-12%;top:-6%;width:760px;height:760px;max-width:90vw;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(250,186,14,.28),rgba(250,186,14,0));z-index:-1}
+.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:clamp(32px,5vw,72px);align-items:center}
+.hero h1{font-size:clamp(3.1rem,8.4vw,6.6rem);text-wrap:balance}
+.hero h1 em{font-style:normal;position:relative;white-space:nowrap;z-index:0}
+.hero h1 em::after{content:"";position:absolute;left:-2%;right:-2%;bottom:.04em;height:.3em;background:var(--glow);opacity:.75;z-index:-1;border-radius:4px;transform:scaleX(0);transform-origin:left;animation:swipe .9s .7s var(--spring) forwards}
+@keyframes swipe{to{transform:scaleX(1)}}
+.hero .lede{font-size:1.2rem}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:34px}
+.fine{font:500 .9rem var(--body);color:var(--muted);margin-top:18px}
+
+.road{position:relative;background:#fff;border:1.5px solid var(--border);border-radius:24px;padding:28px 26px 26px;box-shadow:0 2px 0 var(--border),0 30px 60px -30px rgba(120,70,20,.35);transform:rotate(1.4deg)}
+.road-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
+.road-head h3{font-size:1.7rem}
+.tag{font:700 .72rem var(--label);letter-spacing:.08em;text-transform:uppercase;color:#7A4300;background:var(--cream);border:1px solid #F0DFA0;padding:6px 10px;border-radius:8px;white-space:nowrap}
+.road-sub{font-size:.92rem;color:var(--muted);margin-bottom:22px}
+.steps{list-style:none;padding:0;position:relative}
+.steps::before{content:"";position:absolute;left:17px;top:18px;bottom:18px;width:3px;background:repeating-linear-gradient(to bottom,var(--border) 0 7px,transparent 7px 13px);border-radius:3px}
+.step{position:relative;display:flex;gap:14px;align-items:center;padding:9px 0;font-weight:600}
+.dot{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:700 .85rem var(--label);background:var(--s1);border:2px solid var(--border);color:var(--muted);position:relative;z-index:1}
+.step small{display:block;font-weight:500;font-size:.8rem;color:var(--muted);margin-top:1px}
+.step.done .dot{background:var(--cta);border-color:#C66900;color:var(--on-cta)}
+.step.now .dot{background:var(--cream);border-color:var(--primary);color:#7A4300;box-shadow:0 0 0 5px rgba(250,186,14,.3);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 9px rgba(250,186,14,.12)}}
+.step.skip-s{opacity:.7}
+.step.skip-s .dot{border-style:dashed}
+.ember-hero{position:absolute;right:-18px;bottom:-62px;width:104px;filter:drop-shadow(0 12px 14px rgba(120,60,0,.25));animation:bob 3.4s ease-in-out infinite}
+.bubble{position:absolute;right:56px;bottom:-72px;background:var(--fg);color:#FFF7D9;font:600 .88rem/1.35 var(--body);padding:12px 16px;border-radius:16px 16px 4px 16px;max-width:215px;box-shadow:0 10px 24px -10px rgba(43,32,22,.6)}
+@keyframes bob{50%{transform:translateY(-8px) rotate(2deg)}}
+
+/* shared section */
+section{position:relative}
+.sec{padding-block:clamp(72px,10vw,140px)}
+
+/* problem to stance */
+.problem{background:var(--s1);border-block:1.5px solid var(--border)}
+.problem-head{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,72px);align-items:end}
+.stage-wrap{margin-top:clamp(32px,5vw,56px)}
+.stage{--p:0;position:relative;height:var(--stage-h);border-radius:28px;background:var(--bg);border:1.5px solid var(--border);overflow:hidden;box-shadow:inset 0 0 0 8px var(--bg),inset 0 0 0 9.5px var(--border)}
+.stage svg.trail{position:absolute;inset:0;width:100%;height:100%}
+.trail path{fill:none;stroke:var(--primary);stroke-width:4;stroke-linecap:round;stroke-dasharray:6 11;vector-effect:non-scaling-stroke;opacity:calc((var(--p) - .45)*3)}
+.chip{position:absolute;left:calc((var(--x0)*(1 - var(--p)) + var(--x1,var(--x0))*var(--p))*1%);top:calc((var(--y0)*(1 - var(--p)) + var(--y1,var(--y0))*var(--p))*1%);
+  transform:translate(-50%,-50%) rotate(calc(var(--r)*(1 - var(--p))*1deg));
+  display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:9px 13px;font:600 .82rem/1.2 var(--body);white-space:nowrap;box-shadow:0 8px 16px -10px rgba(80,50,20,.5);
+  opacity:calc(1 - var(--p)*1.35);will-change:transform,opacity}
+.chip b{width:9px;height:9px;border-radius:50%;background:var(--c,#B3261E);flex:none}
+.chip.keep{opacity:1;padding:calc(9px + 5px*var(--p)) calc(13px + 7px*var(--p));border-color:var(--border);font-size:.82rem}
+.chip.keep b{background:var(--primary)}
+.chip.keep .n{display:none}
+.stage[data-done="1"] .chip.keep{border-color:var(--primary);background:var(--cream)}
+.chip:nth-child(3n){--c:#2F6F9F}.chip:nth-child(3n+1){--c:#B3261E}.chip:nth-child(3n+2){--c:#7A6555}
+.stage-ember{position:absolute;left:clamp(14px,3vw,34px);bottom:clamp(14px,3vw,30px);display:flex;align-items:flex-end;gap:8px;z-index:3}
+.stage-ember img{width:74px;filter:drop-shadow(0 8px 10px rgba(120,60,0,.25))}
+.stage-ember .bubble{position:static;max-width:230px;margin-bottom:18px;transition:transform .35s var(--spring)}
+.stage-ember .bubble.pop{transform:scale(1.07) rotate(-1.5deg)}
+.stage-ctl{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-top:22px}
+.slider{display:flex;align-items:center;gap:14px;flex:1 1 280px;font:700 .8rem var(--label);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.slider input{flex:1;accent-color:var(--primary);height:28px;cursor:grab}
+.stage-label{position:absolute;top:22px;font:700 .72rem var(--label);letter-spacing:.14em;text-transform:uppercase;z-index:2;color:var(--muted)}
+.stage-label.l{left:26px;opacity:calc(1 - var(--p)*1.4)}
+.stage-label.r{right:26px;color:#9A5200;opacity:calc((var(--p) - .5)*2)}
+
+/* how */
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(40px,6vw,72px);counter-reset:s}
+.how-item{padding:8px clamp(18px,2.4vw,36px) 8px 0;position:relative}
+.how-item+.how-item{padding-left:clamp(18px,2.4vw,36px);border-left:1.5px dashed var(--border)}
+.how-item .num{font:800 clamp(4.5rem,9vw,7.5rem)/.8 var(--display);letter-spacing:-.06em;color:transparent;-webkit-text-stroke:2px var(--primary);display:block;margin-bottom:20px;transition:transform .5s var(--spring)}
+.how-item:hover .num{transform:translateY(-6px) rotate(-3deg);color:var(--glow);-webkit-text-stroke-color:#C66900}
+.how-item h3{font-size:1.75rem;margin-bottom:12px}
+.how-item p{color:var(--muted)}
+.picks{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;list-style:none;padding:0}
+.picks li{font:600 .8rem var(--label);background:var(--s1);border:1.5px solid var(--border);border-radius:9px;padding:8px 11px}
+.picks li.on{background:var(--cream);border-color:var(--primary);color:#7A4300}
+
+/* lesson */
+.lesson{background:var(--fg);color:#F6EBDD;overflow:hidden}
+.lesson .eyebrow{color:var(--gold)}
+.lesson .lede{color:#CDB9A5}
+.lesson-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(32px,6vw,88px);align-items:center}
+.tabs{list-style:none;padding:0;margin-top:34px;display:grid;gap:6px}
+.tabs button{all:unset;box-sizing:border-box;width:100%;display:flex;gap:16px;align-items:center;cursor:pointer;padding:14px 16px;border-radius:14px;font:700 1.05rem var(--label);color:#CDB9A5;transition:background .2s,color .2s,transform .35s var(--spring)}
+.tabs button:hover{background:rgba(255,247,217,.07);transform:translateX(6px)}
+.tabs button:focus-visible{outline:3px solid var(--gold)}
+.tabs button[aria-selected="true"]{background:var(--cream);color:var(--fg);transform:translateX(10px)}
+.tabs .k{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;border:2px solid currentColor;flex:none}
+.tabs [aria-selected="true"] .k{background:var(--primary);border-color:var(--primary);color:var(--on-cta)}
+.card{background:#FFFDF9;color:var(--fg);border-radius:26px;padding:clamp(24px,3.4vw,40px);box-shadow:0 40px 70px -30px rgba(0,0,0,.65),0 0 0 8px rgba(255,247,217,.06);position:relative;min-height:430px;transform:rotate(-1deg)}
+.pips{display:flex;gap:6px;margin-bottom:26px}
+.pips i{flex:1;height:6px;border-radius:6px;background:var(--border);transition:background .3s}
+.pips i.on{background:var(--primary)}
+.card .meta{display:flex;justify-content:space-between;font:700 .72rem var(--label);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.card h3{font-size:clamp(2rem,3.6vw,2.8rem);margin-bottom:16px}
+.card p{color:var(--muted);max-width:44ch}
+.panel{margin-top:24px;border-radius:16px;background:var(--s1);border:1.5px solid var(--border);padding:18px;min-height:130px}
+.panel.video{background:linear-gradient(135deg,#3A2A1C,#2B2016);color:#F6EBDD;display:flex;align-items:center;gap:16px;border-color:#2B2016}
+.play{width:54px;height:54px;border-radius:50%;background:var(--cta);display:grid;place-items:center;flex:none}
+.panel ul{padding-left:1.1em;display:grid;gap:8px;font-weight:500}
+.panel .src{font:600 .78rem var(--label);color:var(--muted);margin-top:12px;display:block}
+.slide{animation:in .45s var(--spring)}
+@keyframes in{from{opacity:0;transform:translateY(14px)}}
+
+/* ember */
+.ember-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(32px,6vw,88px);align-items:center}
+.demo{background:var(--cream);border:1.5px solid #F0DFA0;border-radius:28px;padding:clamp(24px,3.4vw,40px);position:relative}
+.demo-top{display:flex;align-items:flex-end;gap:14px;min-height:140px}
+.demo-top img{width:96px;filter:drop-shadow(0 10px 12px rgba(120,60,0,.25));flex:none}
+.demo-top .bubble{position:relative;right:auto;bottom:auto;margin-bottom:26px;max-width:280px;font-size:.98rem;transition:transform .35s var(--spring)}
+.demo-top .bubble::before{content:"";position:absolute;left:-8px;bottom:12px;border:8px solid transparent;border-right-color:var(--fg);border-left:0}
+.demo-top .bubble{border-radius:16px 16px 16px 4px}
+.bubble.pop{transform:scale(1.06) rotate(-1deg)}
+.demo-list{list-style:none;padding:0;margin-top:22px;display:grid;gap:10px}
+.demo-list li{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:10px 10px 10px 16px;font-weight:700;transition:background .3s,border-color .3s}
+.demo-list li span{flex:1}
+.demo-list li.m{background:#FFFBEA;border-color:var(--primary)}
+.demo-list li.m span{text-decoration:none}
+.demo-list button{font:700 .8rem var(--label);border-radius:10px;padding:10px 14px;border:1.5px solid var(--border);background:var(--s1);color:var(--fg);cursor:pointer;transition:transform .3s var(--spring),background .2s;min-width:120px}
+.demo-list button:hover{transform:scale(1.05) rotate(-1deg)}
+.demo-list button:active{transform:scale(.94)}
+.demo-list li.m button{background:var(--cta);border-color:#C66900;color:var(--on-cta)}
+.nos{list-style:none;padding:0;margin-top:34px;display:grid;gap:0}
+.nos li{display:flex;gap:18px;align-items:baseline;padding:18px 0;border-top:1.5px solid var(--border);font:800 clamp(1.5rem,2.8vw,2.1rem)/1.1 var(--display);letter-spacing:-.03em}
+.nos li:last-child{border-bottom:1.5px solid var(--border)}
+.nos s{text-decoration-color:var(--primary);text-decoration-thickness:4px}
+.nos span{font:500 .98rem/1.4 var(--body);color:var(--muted);letter-spacing:0;margin-left:auto;text-align:right;max-width:24ch}
+
+/* final */
+.final{text-align:center;background:var(--cta);color:var(--on-cta);overflow:hidden;padding-block:clamp(72px,10vw,130px)}
+.final h2{font-size:clamp(2.6rem,7.4vw,6rem);max-width:14ch;margin-inline:auto}
+.final p{margin:22px auto 0;max-width:46ch;font-weight:600;font-size:1.15rem}
+.final .btn{background:var(--fg);color:#FFF7D9;box-shadow:0 -3px 0 rgba(255,255,255,.12) inset,0 16px 30px -10px rgba(43,32,22,.6);margin-top:36px}
+.final .curl{position:absolute;width:min(420px,60vw);opacity:.22;color:#7A4300}
+.final .curl.a{left:-90px;top:-40px;transform:rotate(-20deg)}.final .curl.b{right:-100px;bottom:-60px;transform:rotate(150deg)}
+.final .wrap{position:relative}
+footer{padding-block:34px;font-size:.92rem;color:var(--muted)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:space-between;align-items:center}
+footer a{font-weight:700;color:var(--fg)}
+
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .8s var(--spring)}
+.rv.in{opacity:1;transform:none}
+
+@media (max-width:900px){
+  .hero-grid,.problem-head,.lesson-grid,.ember-grid{grid-template-columns:1fr}
+  .road{transform:none;margin-bottom:110px}
+  .how-grid{grid-template-columns:1fr;gap:36px}
+  .how-item,.how-item+.how-item{padding:0;border:0}
+  .how-item+.how-item{border-top:1.5px dashed var(--border);padding-top:36px}
+  .card{transform:none;min-height:0}
+  .nos li{flex-wrap:wrap}.nos span{margin-left:0;text-align:left;max-width:none;flex-basis:100%}
+}
+@media (max-width:480px){
+  .stage{--stage-h:560px}
+  .chip{font-size:.72rem;padding:7px 10px}
+  .ember-hero{width:88px;right:-6px}
+  .bubble{right:50px;max-width:185px}
+  .demo-list button{min-width:0}
+  .stage-ember .bubble{max-width:170px;font-size:.8rem}
+  .stage-ember img{width:58px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .rv{opacity:1;transform:none}
+  .hero h1 em::after{transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#start">Skip to content</a>
+
+<header class="wrap nav">
+  <a class="logo" href="#top" aria-label="Whittle home">
+    <svg class="i" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M4 22C4 11 11 4 22 4c0 11-7 18-18 18Z" fill="#EB8928"/><path d="M4 22 16 10" stroke="#FFF7D9" stroke-width="2.4" stroke-linecap="round"/></svg>
+    Whittle
+  </a>
+  <a class="btn small" href="/">Start your roadmap</a>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">One hobby. One roadmap.</p>
+      <h1>Stop watching. Start <em>getting good.</em></h1>
+      <p class="lede">Pick the hobby you keep meaning to try. Whittle shaves the internet down to 5 to 8 techniques, in the right order, so you know what to practice next.</p>
+      <div class="cta-row">
+        <a class="btn" id="start" href="/">Start your roadmap
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 9h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn ghost" href="#pile">See how it works</a>
+      </div>
+      <p class="fine">Free. No account. Your progress stays on your device.</p>
+    </div>
+
+    <div style="position:relative">
+      <article class="road" aria-label="Example roadmap for Pickleball">
+        <div class="road-head"><h3>Pickleball</h3><span class="tag">Beginner</span></div>
+        <p class="road-sub">6 techniques, foundational to advanced</p>
+        <ol class="steps">
+          <li class="step done"><span class="dot" aria-hidden="true">&#10003;</span><div>Grip and ready position<small>Mastered</small></div></li>
+          <li class="step now"><span class="dot" aria-hidden="true">2</span><div>The serve<small>Up next, 5 slides</small></div></li>
+          <li class="step"><span class="dot" aria-hidden="true">3</span><div>Dinking at the kitchen line</div></li>
+          <li class="step skip-s"><span class="dot" aria-hidden="true">4</span><div>Third shot drop<small>Skipped, bring it back anytime</small></div></li>
+          <li class="step"><span class="dot" aria-hidden="true">5</span><div>Stacking and court sense</div></li>
+          <li class="step"><span class="dot" aria-hidden="true">6</span><div>Attack and counter</div></li>
+        </ol>
+      </article>
+      <img class="ember-hero" src="/mascot.gif" width="104" height="129" alt="Ember, the Whittle mascot, a small flame">
+      <p class="bubble">You're 5 steps away from mastering Pickleball!</p>
+    </div>
+  </div>
+</section>
+
+<section class="problem sec" id="pile" aria-labelledby="pile-h">
+  <div class="wrap">
+    <div class="problem-head">
+      <div>
+        <p class="eyebrow">The problem</p>
+        <h2 id="pile-h">Too much to watch is the same as nothing to follow.</h2>
+      </div>
+      <p class="lede">Forty tabs, nine tutorials, one afternoon gone. Whittling is cutting away everything that is not the shape. Drag it, or just keep scrolling, and watch the pile become a path.</p>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage" id="stage" role="img" aria-label="Animation: a scattered pile of video and article tabs shrinks into five steps on a single path">
+        <span class="stage-label l">The firehose</span>
+        <span class="stage-label r">Your roadmap</span>
+        <svg class="trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M32 12 C 66 8, 70 22, 64 28 S 28 38, 34 46 S 68 54, 62 62 S 34 72, 48 78"/></svg>
+        <div id="chips"></div>
+        <div class="stage-ember">
+          <img src="/mascot.gif" width="74" height="92" alt="">
+          <p class="bubble" id="stageBubble" aria-live="polite">That is a lot of tabs.</p>
+        </div>
+      </div>
+      <div class="stage-ctl">
+        <label class="slider">Pile<input type="range" id="whittle" min="0" max="100" value="0" aria-label="Whittle the pile into a roadmap">Path</label>
+        <button class="btn small" id="auto" type="button">Whittle it</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="how-h">
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2 id="how-h">Three steps. About two minutes.</h2>
+    <div class="how-grid">
+      <article class="how-item rv">
+        <span class="num" aria-hidden="true">1</span>
+        <h3>Pick one hobby</h3>
+        <p>Chess, pickleball, bouldering, sourdough. Tell us your level, your goal, and how much time you really have.</p>
+        <ul class="picks" aria-label="Example answers"><li class="on">Pickleball</li><li class="on">Beginner</li><li>3 hrs a week</li></ul>
+      </article>
+      <article class="how-item rv">
+        <span class="num" aria-hidden="true">2</span>
+        <h3>Get your roadmap</h3>
+        <p>5 to 8 techniques, ordered from foundational to advanced, built from real videos, articles and podcasts we searched for you.</p>
+      </article>
+      <article class="how-item rv">
+        <span class="num" aria-hidden="true">3</span>
+        <h3>Learn one at a time</h3>
+        <p>Each technique is 5 short slides. Master it, or skip it and bring it back whenever you like. No guilt either way.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="lesson sec" aria-labelledby="les-h">
+  <div class="wrap lesson-grid">
+    <div>
+      <p class="eyebrow">Inside a technique</p>
+      <h2 id="les-h">Five slides. One skill. Done in a sitting.</h2>
+      <p class="lede">Every technique follows the same shape, so you always know where you are. Try it.</p>
+      <div class="tabs" role="tablist" aria-label="Lesson slides" style="display:grid" id="tabs"></div>
+    </div>
+    <div class="card" id="card" role="tabpanel" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="em-h">
+  <div class="wrap ember-grid">
+    <div class="demo rv">
+      <div class="demo-top">
+        <img src="/mascot.gif" width="96" height="119" alt="Ember the mascot">
+        <p class="bubble" id="demoBubble" aria-live="polite"></p>
+      </div>
+      <ul class="demo-list" id="demoList"></ul>
+    </div>
+    <div>
+      <p class="eyebrow">Meet Ember</p>
+      <h2 id="em-h">A small flame that knows exactly where you are.</h2>
+      <p class="lede">Ember reacts to your real progress, not a made up score. Master a technique and it cheers. Skip one and it shrugs. Go quiet for a week and nothing breaks.</p>
+      <ul class="nos">
+        <li><s>Streaks</s><span>Miss a day, lose nothing.</span></li>
+        <li><s>Points</s><span>Skill is the only score.</span></li>
+        <li><s>Accounts</s><span>Progress is saved on your device.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <svg class="curl a" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M20 180C20 90 80 20 170 20c0 60-40 100-90 100-30 0-45-20-30-40 12-16 40-10 40 8" stroke="currentColor" stroke-width="14" stroke-linecap="round"/></svg>
+  <svg class="curl b" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M20 180C20 90 80 20 170 20c0 60-40 100-90 100-30 0-45-20-30-40 12-16 40-10 40 8" stroke="currentColor" stroke-width="14" stroke-linecap="round"/></svg>
+  <div class="wrap">
+    <h2>Pick one hobby. Start today.</h2>
+    <p>Your roadmap is ready in about 20 seconds. Ember will be waiting.</p>
+    <a class="btn" href="/">Start your roadmap
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 9h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><strong style="font-family:var(--display);font-size:1.1rem;color:var(--fg)">Whittle</strong> &nbsp;Learn one thing well.</span>
+    <a href="/">Try the live demo</a>
+  </div>
+</footer>
+
+<script>
+const CFG={
+  reveal:{threshold:.15},
+  autoMs:2600,
+  stageBubble:[[0,"That is a lot of tabs."],[.35,"Cutting the noise..."],[.7,"Look at that. One path."],[.97,"Five steps. That is all you need."]],
+  lesson:[
+    ["Introduction","What it is and why it matters","Start with the big picture in two minutes, so everything after it makes sense.",["What the technique is","Where it fits on your roadmap","What good looks like"]],
+    ["Watch & Learn","One video, picked for you","We found the clearest teacher for this technique and tell you why we chose it.","video"],
+    ["How it Works","The moving parts, plainly","A short article read, broken into the few things that actually matter.",["Stance and setup","The motion, step by step","The cue to remember"]],
+    ["Watch Out For","Common mistakes","The slips nearly every beginner makes, and the quick fix for each one.",["Gripping too tight","Rushing the setup","Skipping the warm up"]],
+    ["Master","Try it, then call it","Practice with a simple drill. When it feels natural, mark it mastered. Not yet? Skip it for now.",["Do the 10 minute drill","Mark it mastered","Or skip it and return later"]]
+  ],
+  steps:["Grip and ready position","The serve","Dinking at the kitchen line","Third shot drop","Stacking and court sense","Attack and counter"],
+  demoStart:1,
+  chips:["10 BEST pickleball tips (you won't believe #7)","pickleball vs tennis reddit","Is the serve legal? 2019 thread","Paddle reviews 2024 ranked","POV: your first dink","Pro drills, 47 min","podcast: kitchen rules debate","Best shoes for courts?","Beginner mistakes (part 3 of 9)","Spin serve in 30 days","Why you lose at 4.0","Rules explained AGAIN","Court sizes, in feet","Stacking: a 90 min deep dive"]
+};
+
+const stage=document.getElementById('stage'),chipsEl=document.getElementById('chips'),sb=document.getElementById('stageBubble'),range=document.getElementById('whittle'),autoBtn=document.getElementById('auto');
+const endPts=[[32,12],[64,28],[34,46],[62,62],[48,78]];
+const start=[[10,12],[34,8],[62,12],[88,10],[16,30],[44,26],[78,30],[24,48],[54,46],[86,50],[12,66],[40,64],[72,68],[90,84]];
+const keepIdx=[0,5,7,12,13],keepSteps=[0,1,2,4,5];
+CFG.chips.forEach((t,i)=>{
+  const c=document.createElement('div');c.className='chip';
+  const k=keepIdx.indexOf(i);
+  if(k>-1){c.classList.add('keep');c.style.setProperty('--x1',endPts[k][0]);c.style.setProperty('--y1',endPts[k][1]);t=CFG.steps[keepSteps[k]]}
+  c.style.setProperty('--x0',start[i][0]);c.style.setProperty('--y0',start[i][1]);c.style.setProperty('--r',((i*37)%30)-15);
+  c.innerHTML='<b></b><span>'+t+'</span>';chipsEl.appendChild(c);
+});
+
+function setP(p){
+  stage.style.setProperty('--p',p);stage.dataset.done=p>.97?1:0;range.value=p*100;
+  let line=CFG.stageBubble[0][1];CFG.stageBubble.forEach(([at,tx])=>{if(p>=at)line=tx});
+  if(sb.textContent!==line){sb.textContent=line;sb.classList.add('pop');setTimeout(()=>sb.classList.remove('pop'),260)}
+}
+setP(0);
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+let raf;
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function animateTo(target){
+  cancelAnimationFrame(raf);
+  if(reduce){setP(target);return}
+  const from=+range.value/100,t0=performance.now();
+  (function tick(now){const t=Math.min(1,(now-t0)/CFG.autoMs);setP(from+(target-from)*ease(t));if(t<1)raf=requestAnimationFrame(tick)})(t0);
+}
+range.addEventListener('input',()=>{cancelAnimationFrame(raf);setP(range.value/100)});
+autoBtn.addEventListener('click',()=>{const done=+range.value>=99;animateTo(done?0:1);autoBtn.textContent=done?'Whittle it':'Pile it back up'});
+
+const tabs=document.getElementById('tabs'),card=document.getElementById('card');
+function renderLesson(i){
+  const [name,title,desc,body]=CFG.lesson[i];
+  [...tabs.children].forEach((b,j)=>{b.setAttribute('aria-selected',j===i);b.tabIndex=j===i?0:-1});
+  const panel=body==='video'
+    ?'<div class="panel video"><span class="play" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 3.5v13l11-6.5z" fill="#180F05"/></svg></span><div><strong>Video, 8 min</strong><span class="src" style="color:#CDB9A5">Why this one: clear, slow, and shows it from the side.</span></div></div>'
+    :'<div class="panel"><ul>'+body.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  card.innerHTML='<div class="slide"><div class="pips" aria-hidden="true">'+CFG.lesson.map((_,j)=>'<i class="'+(j<=i?'on':'')+'"></i>').join('')+'</div><div class="meta"><span>Slide '+(i+1)+' of 5</span><span>The serve</span></div><h3>'+name+'</h3><p><strong>'+title+'.</strong> '+desc+'</p>'+panel+'</div>';
+}
+CFG.lesson.forEach((l,i)=>{
+  const b=document.createElement('button');b.type='button';b.setAttribute('role','tab');
+  b.innerHTML='<span class="k">'+(i+1)+'</span>'+l[0];
+  b.addEventListener('click',()=>renderLesson(i));
+  b.addEventListener('keydown',e=>{const d={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];if(d){e.preventDefault();const n=(i+d+5)%5;renderLesson(n);tabs.children[n].focus()}});
+  tabs.appendChild(b);
+});
+renderLesson(0);
+
+const dl=document.getElementById('demoList'),db=document.getElementById('demoBubble');
+const state=CFG.steps.map((_,i)=>i<CFG.demoStart);
+function renderDemo(msg){
+  const left=state.filter(x=>!x).length;
+  dl.innerHTML='';
+  state.forEach((m,i)=>{
+    const li=document.createElement('li');if(m)li.className='m';
+    li.innerHTML='<span>'+CFG.steps[i]+'</span>';
+    const b=document.createElement('button');b.type='button';b.textContent=m?'Mastered':'Mark mastered';b.setAttribute('aria-pressed',m);
+    b.addEventListener('click',()=>{state[i]=!state[i];const l=state.filter(x=>!x).length;renderDemo(state[i]?(l===0?"All mastered. Go play a real game!":"Nice, that's one more in the bag. "+(l===1?"1 step":l+" steps")+" to go."):"Back on the list. No rush.");});
+    li.appendChild(b);dl.appendChild(li);
+  });
+  db.textContent=msg||"You're "+left+" steps away from mastering Pickleball!";
+  db.classList.add('pop');setTimeout(()=>db.classList.remove('pop'),260);
+}
+renderDemo();
+
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),CFG.reveal);
+document.querySelectorAll('.rv').forEach((el,i)=>{el.style.transitionDelay=(i%3)*90+'ms';io.observe(el)});
+
+if(!reduce){
+  let ticking=false;
+  addEventListener('scroll',()=>{
+    if(ticking||document.activeElement===range)return;ticking=true;
+    requestAnimationFrame(()=>{
+      ticking=false;if(autoBtn.dataset.manual)return;
+      const r=stage.getBoundingClientRect(),vh=innerHeight;
+      const p=Math.min(1,Math.max(0,(vh*.85-r.top)/(vh*.85+r.height*.1-vh*.2)));
+      if(Math.abs(p-range.value/100)>.003)setP(p);
+    });
+  },{passive:true});
+  range.addEventListener('input',()=>autoBtn.dataset.manual=1);
+  autoBtn.addEventListener('click',()=>autoBtn.dataset.manual=1);
+}
+</script>
+</body>
+</html>
